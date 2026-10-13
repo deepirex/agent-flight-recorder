@@ -59,7 +59,8 @@ def narrate(e: dict[str, Any]) -> None:
     elif k == "execute":
         out = f"{seq}   {_c('green', '✓ EXECUTED')}  {b['result'][:80]}"
     elif k == "incident":
-        out = f"{seq}   {_c('orange', '⚑ INCIDENT ' + b['id'])}  {_c('dim', str(b['entries_captured']) + ' entries + snapshot saved')}"
+        saved = f"{b['entries_captured']} entries" + (" + pre-action snapshot" if b.get("snapshot") else "") + " saved"
+        out = f"{seq}   {_c('orange', '⚑ INCIDENT ' + b['id'])}  {_c('dim', saved)}"
     elif k == "brake":
         out = f"{seq}   {_c('red', '■ BRAKE')}  {b['tool']} refused"
     if out:

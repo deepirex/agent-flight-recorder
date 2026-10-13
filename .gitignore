@@ -16,5 +16,6 @@ poc/runs/*
 !poc/runs/v2-scripted/
 !poc/runs/v2-live/
 !poc/runs/v2-brake/
+!poc/runs/demo/
 poc/runs/**/world/
 poc/runs/**/snapshots/

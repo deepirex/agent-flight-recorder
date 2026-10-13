@@ -101,7 +101,7 @@ class Gateway:
                   f"Decision entry hash: `{entry['hash']}`"]
         (d / "incident.md").write_text("\n".join(lines) + "\n")
         self.log("incident", {"id": inc_id, "path": str(d.relative_to(self.run_dir)), "reason": reason,
-                              "entries_captured": len(chain)})
+                              "entries_captured": len(chain), "snapshot": snapshot["id"] if snapshot else None})
         return inc_id
 
     # ------------------------------------------------------------ state given to the judges

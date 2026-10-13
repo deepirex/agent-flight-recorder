@@ -12,8 +12,15 @@ insider risks, and keep every control and every piece of evidence outside the mo
 - **Proof of concept:** [`poc/`](poc/) — a local agent (Gemma 4) does real work through a gateway with deterministic
   rules, a local decision model as judge ([d3-flash](https://huggingface.co/vllm-sr/d3-flash)), a hold queue for
   humans, snapshots before every consequential action, incident bundles, and a hash-chained, signed record.
-- **Demo:** [`demo/flight-recorder-live.mp4`](demo/flight-recorder-live.mp4) — an unedited recording of a live run,
-  then a tamper-detection check on its record.
+- **Demo:** [`demo/flight-recorder-live.mp4`](demo/flight-recorder-live.mp4) — an unedited, real-time recording
+  (6 min 42 s) of a live run, then a tamper-detection check on its record. A labelled 3× time-lapse is in
+  [`demo/flight-recorder-live-3x.mp4`](demo/flight-recorder-live-3x.mp4). The run's own record is in
+  [`poc/runs/demo/`](poc/runs/demo/) (186 entries, head `f0fd15ca…ad79be`).
+
+![The judge blocks an email that follows a prompt injection, twice](demo/prompt-injection-blocked.gif)
+
+*Gemma 4 follows an instruction hidden in a support ticket and tries to email two other customers' account notes.
+Every rule passes. d3-flash scores it 0.98 for third-party data and the gateway blocks it, twice.*
 
 ![Architecture](images/architecture-diagram.png)
 

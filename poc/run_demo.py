@@ -98,7 +98,7 @@ def main() -> None:
     (run_root / "summary.json").write_text(json.dumps(
         {"run": run_root.name, "agent": args.agent, "versions": versions, "verify": check, "results": results},
         indent=2, ensure_ascii=False))
-    print(f"Run saved to {run_root}")
+    print(f"Run saved to {os.path.relpath(run_root)}")
 
 
 if __name__ == "__main__":
