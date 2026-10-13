@@ -1,0 +1,20 @@
+.DS_Store
+__pycache__/
+*.pyc
+
+# Drafts and the artifact source (article.html is the published, standalone copy)
+x-article.md
+linkedin-post.md
+agent-flight-recorder.html
+
+# Never publish the recorder's signing key
+poc/.keys/
+
+# Runs: publish only the v2 evidence runs, without the sandbox copies
+# (each contains nested git repositories). Records, summaries, incidents and labels are kept.
+poc/runs/*
+!poc/runs/v2-scripted/
+!poc/runs/v2-live/
+!poc/runs/v2-brake/
+poc/runs/**/world/
+poc/runs/**/snapshots/
