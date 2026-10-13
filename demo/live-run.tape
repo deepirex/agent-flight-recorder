@@ -18,7 +18,7 @@ Set WaitTimeout 1800s
 Set Theme { "name": "flight-recorder", "background": "#0F1B2D", "foreground": "#E4EAF1", "cursor": "#FF6A30", "selection": "#263448", "black": "#0C131D", "red": "#F2776C", "green": "#55C891", "yellow": "#E5AA44", "blue": "#7AA7E0", "magenta": "#C792EA", "cyan": "#7CC4E8", "white": "#E4EAF1", "brightBlack": "#93A1B4", "brightRed": "#FF8E5E", "brightGreen": "#7FE0AE", "brightYellow": "#F5C76A", "brightBlue": "#9DC1F0", "brightMagenta": "#DDB3F5", "brightCyan": "#A6DCF2", "brightWhite": "#FFFFFF" }
 
 Hide
-Type "cd poc && export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH PY=$HOME/Models/d3-flash/.venv/bin/python PROMPT='%F{208}❯%f ' RPROMPT='' && clear" Enter
+Type "setopt interactivecomments && cd poc && export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH PY=$HOME/Models/d3-flash/.venv/bin/python PROMPT='%F{208}❯%f ' RPROMPT='' && clear" Enter
 Sleep 1s
 Show
 

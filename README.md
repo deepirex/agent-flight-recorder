@@ -13,9 +13,9 @@ insider risks, and keep every control and every piece of evidence outside the mo
   rules, a local decision model as judge ([d3-flash](https://huggingface.co/vllm-sr/d3-flash)), a hold queue for
   humans, snapshots before every consequential action, incident bundles, and a hash-chained, signed record.
 - **Demo:** [`demo/flight-recorder-live.mp4`](demo/flight-recorder-live.mp4) — an unedited, real-time recording
-  (6 min 42 s) of a live run, then a tamper-detection check on its record. A labelled 3× time-lapse is in
+  (6 min 56 s) of a live run, then a tamper-detection check on its record. A labelled 3× time-lapse is in
   [`demo/flight-recorder-live-3x.mp4`](demo/flight-recorder-live-3x.mp4). The run's own record is in
-  [`poc/runs/demo/`](poc/runs/demo/) (186 entries, head `f0fd15ca…ad79be`).
+  [`poc/runs/demo/`](poc/runs/demo/) (186 entries, head `753c2597…e27279`).
 
 ![The judge blocks an email that follows a prompt injection, twice](demo/prompt-injection-blocked.gif)
 
@@ -57,3 +57,9 @@ poc/             gateway, recorder, judges, rules, sandbox, scenarios, evidence 
 ```
 
 The scenarios use a fictional company. All people, accounts and keys in them are made up.
+
+## License
+
+Copyright 2026 deepirex. Licensed under the [Apache License, Version 2.0](LICENSE).
+
+d3-flash and Gemma are separate models with their own licenses and are not included in this repository.

@@ -114,7 +114,7 @@ not published (see the limits below). The head hash of each published record:
 | `v2-live` | 209 | `59eb3c5f0e885986a73e9453701bbedcae0efcf6b8a20ea355444888d2544873` |
 | `v2-scripted` | 106 | `007e7a6009d260f7dc0c731d3667d02881518337c3c72d7a171ef238a77a5c5d` |
 | `v2-brake` | 11 | `d229ec46cbb7e5dce51c9ef801500a132d75ac8f3529fe6ce81bcb121817d0ff` |
-| `demo` (the recorded run) | 186 | `f0fd15ca308016d7c06cc1a6e8adde2642ed76fd6c277f3524b71ab25bad79be` |
+| `demo` (the recorded run) | 186 | `753c2597c18469916ad6bfa1163c57dba8c513a4e237845e034ec7d303e27279` |
 
 Each run directory also holds `summary.json`, `labels.jsonl` and an `incidents/` folder per scenario. The world copies
 and snapshots are produced on every local run but not committed, because each contains nested git repositories.
