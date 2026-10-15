@@ -2,9 +2,11 @@
 
 **The model proposes. The harness decides. The recorder remembers.**
 
-An architecture, and a working proof of concept, for running AI agents the way Satya Nadella describes in his post on
-the trust architecture for AI: separate the supply of intelligence from the authority over it, treat models as
-insider risks, and keep every control and every piece of evidence outside the model.
+An architecture, and a working proof of concept, for giving AI agents real work without trusting the model to behave.
+The model does the thinking. Authority comes from deterministic rules, cheap independent judges can only say no, and
+the evidence lives in a record no model can touch. It's built to address the concerns Satya Nadella and Nikesh Arora
+have raised: separate the supply of intelligence from the authority over it, treat models as insider risks, and give
+security teams a stable way in.
 
 - **Article:** [`article.html`](article.html) (open it in a browser). It covers the architecture, the cost model,
   the answer to the "black box watching a black box" objection, a mapping to Satya's seven observability principles,
