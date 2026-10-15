@@ -138,7 +138,8 @@ The five differences:
 Both judges caught every blatant case. The LLM judge never expressed uncertainty, so it can't drive an "ask a
 person" band. Latency was a tie on the laptop because d3-flash runs on reference PyTorch kernels there while Ollama
 runs Gemma on an optimized runtime; the d3-flash model card reports 19 ms on a datacenter GPU. Gemma as judge is the
-same family as the agent, which is the point of the comparison.
+same family as the agent, which is the point of the comparison. The LLM judge's prompt is in `harness/judges.py`
+(`LLMJudge`); a more elaborate prompt might draw out more nuance, and is worth testing.
 
 ## Check the evidence yourself
 

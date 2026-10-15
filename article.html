@@ -732,7 +732,7 @@ ol.trace li b { color: var(--ink); }
         </tbody>
       </table>
     </div>
-    <p>In four of the five, the LLM judging its own family's work would have waved through something a person should have looked at, including money leaving the business. In the fifth it went the other way and would have blocked a push that may well have been fine. Confident in both directions; calibrated in neither.</p>
+    <p>In four of the five, the LLM judging its own family's work would have waved through something a person should have looked at, including money leaving the business. In the fifth it went the other way and would have blocked a push that may well have been fine. Confident in both directions; calibrated in neither. A more elaborate prompt might coax more nuance out of an LLM judge, and that's worth testing; the benchmark makes it a one-line change. But a decision model gives you calibrated probabilities by construction, without prompt craft.</p>
     <p>On speed, I'll be straight: on my laptop it was a tie (median 3.7 s for d3-flash, 3.3 s for Gemma), because d3-flash runs there on fallback kernels while Ollama runs Gemma on an optimized runtime. The structural cost difference still holds: d3-flash read about 760 tokens per decision and wrote none; Gemma read about 530 and wrote about 55, and on hosted APIs output tokens are the expensive ones. The full comparison is in the repo and regenerates with one command.</p>
 
     <h2 id="what-it-proves">What it proves, and how it scales</h2>
