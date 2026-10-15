@@ -15,14 +15,16 @@ separating intelligence from authority and keeping AI auditable.
   humans, per-use-case policy packs, snapshots before every consequential action, incident bundles, and a
   hash-chained, signed record.
 - **Demo:** [`demo/flight-recorder-live.mp4`](demo/flight-recorder-live.mp4) — an unedited, real-time recording
-  (6 min 56 s) of a live run, then a tamper-detection check on its record. A labelled 3× time-lapse is in
+  (11 min 10 s) of a live run with both judges on screen, then a tamper-detection check on its record. A labelled
+  3× time-lapse is in
   [`demo/flight-recorder-live-3x.mp4`](demo/flight-recorder-live-3x.mp4). The run's own record is in
-  [`poc/runs/demo/`](poc/runs/demo/) (186 entries, head `753c2597…e27279`).
+  [`poc/runs/demo/`](poc/runs/demo/) (199 entries, head `59bbdd1d…1ca678`).
 
-![The judge blocks an email that follows a prompt injection, twice](demo/prompt-injection-blocked.gif)
+![Both judges block the injected email; then they disagree on an unrequested refund](demo/judges-disagree.gif)
 
-*Gemma 4 follows an instruction hidden in a support ticket and tries to email two other customers' account notes.
-Every rule passes. d3-flash scores it 0.98 for third-party data and the gateway blocks it, twice.*
+*5× speed. Gemma 4 follows an instruction hidden in a support ticket and tries to email two other customers' account
+notes. Every rule passes; both judges block it, twice. Gemma then proposes a refund nobody asked for. d3-flash is
+unsure (0.67) and holds it for a person. Gemma, judging its own family's work in shadow, would have allowed it (0.00).*
 
 ![Architecture](images/architecture-diagram.png)
 

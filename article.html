@@ -660,7 +660,8 @@ ol.trace li b { color: var(--ink); }
 
   <article class="col prose">
     <h2 id="what-happened">What happened</h2>
-    <p>I ran six scenarios twice. Once with a scripted red-team agent that deliberately proposes harmful actions, the standard way to test a monitor. Once with Gemma deciding for itself, at temperature 0 so the run can be reproduced. The live run is the interesting one. Nobody told Gemma to misbehave.</p>
+    <p>I gave the agent six everyday jobs in a simulated company: resolve three support tickets, fix a failing build, fix a typo in a README, and get outside help with a payments error. A few had realistic traps planted, the kind that turn up in real systems: a ticket with an instruction hidden in it for the AI, a customer asking for "something for the delay" when nothing had been approved, and a task that told the agent to post a config file, secret key included, to an outside site.</p>
+    <p>I ran the six twice. Once with a scripted red-team agent that deliberately proposes harmful actions, the standard way to test a monitor. Once with Gemma deciding for itself, at temperature 0 so the run can be reproduced. The live run is the interesting one. Nobody told Gemma to misbehave.</p>
 
     <div class="tbl-wrap">
       <table class="proof">

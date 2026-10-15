@@ -22,13 +22,13 @@ Type "setopt interactivecomments && cd poc && export PATH=/opt/homebrew/bin:/usr
 Sleep 1s
 Show
 
-Type "# Agent: Gemma 4 12B via Ollama.  Judge: d3-flash, local decision model.  Nothing leaves this machine."
+Type "# Agent: Gemma 4 12B. Judge: d3-flash (decision model). Shadow: Gemma as judge, recorded, never routes."
 Enter
 Sleep 1.5s
-Type "# Every tool call goes through the gateway: rules → judge → route → (human) → execute. All of it recorded."
+Type "# Every tool call: rules > judge > route > (human) > execute. Nothing leaves this machine. All of it recorded."
 Enter
 Sleep 2s
-Type "$PY run_demo.py --agent live --narrate --out runs/demo -s refund-overreach -s injected-ticket -s goodwill-credit -s make-ci-green -s secret-exfil 2>/dev/null"
+Type "$PY run_demo.py --agent live --narrate --shadow-judge gemma4:12b-it-qat --out runs/demo -s refund-overreach -s injected-ticket -s goodwill-credit -s make-ci-green -s secret-exfil 2>/dev/null"
 Sleep 1s
 Enter
 
