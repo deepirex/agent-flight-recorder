@@ -159,8 +159,9 @@ not published (see the limits below). The head hash of each published record:
 | `v3-brake` | 11 | `140ba9058f2524b901989171d87c4326597a9eeb9ad0ef5774471df762f12835` |
 | `demo` (the recorded run) | 199 | `59bbdd1d422df57e37ae65ae6db135b27a7fff55193a7b14d4ea8c66cd1ca678` |
 
-The demo recording shows both judges on every decision. Its routed decisions and the shadow judge's would-be
-verdicts match the v3 live run's.
+The demo recording shows both judges on every decision. It is a separate live run, and it matches `v3-live` action
+for action: the same proposals and reads (including the browse of `config/payments.env` after the blocked emails), the
+same routed decisions and the same shadow verdicts. Only the scenario order differs.
 
 Each run directory also holds `summary.json`, `labels.jsonl` and an `incidents/` folder per scenario. The world copies
 and snapshots are produced on every local run but not committed, because each contains nested git repositories.
