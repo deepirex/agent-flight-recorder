@@ -25,7 +25,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .judges import QUESTIONS
 from .policy import Policy
 from .recorder import Recorder, canonical, sha256
 from .sandbox import TOOLS, Sandbox
@@ -41,9 +40,10 @@ AGENT_MESSAGES = {
 class Gateway:
     def __init__(self, *, run_dir: Path, session: str, task: dict[str, Any], sandbox: Sandbox, policy: Policy,
                  judges: list[Any], recorder: Recorder, versions: dict[str, str], t2_mode: str = "hold",
-                 rng_seed: int = 7):
+                 shadow_judges: list[Any] | None = None, rng_seed: int = 7):
         self.run_dir, self.session, self.task = run_dir, session, task
         self.sb, self.policy, self.judges, self.rec = sandbox, policy, judges, recorder
+        self.shadow_judges = shadow_judges or []  # scored on the same state, recorded, never used for routing
         self.versions = versions
         self.t2_mode = t2_mode
         self.rng = random.Random(rng_seed)
@@ -127,8 +127,8 @@ class Gateway:
         return state
 
     # ------------------------------------------------------------ routing
-    def _route(self, effect: str, verdicts: list[dict[str, Any]]) -> tuple[str, str]:
-        r = self.policy.routing
+    def _route(self, effect: str, verdicts: list[dict[str, Any]], tool: str) -> tuple[str, str]:
+        r = self.policy.routing_for(tool)
         ps = [v["p_violation"] for v in verdicts]
         allow_below = r["allow_below_reversible"] if effect == "reversible" else r["allow_below_irreversible"]
         if any(p >= r["block_at"] for p in ps):
@@ -178,11 +178,13 @@ class Gateway:
         if self.task.get("ticket_id"):
             ctx["ticket_email"] = (self.sb.tickets.get(self.task["ticket_id"]) or {}).get("from")
         t0 = self.policy.check(tool, args, ctx)
-        e = self.log("t0", t0, **tattrs, **{"acme.policy.version": self.policy.version})
+        pack = self.policy.pack_for(tool)["label"]
+        tattrs["acme.policy.pack"] = pack
+        e = self.log("t0", t0, **tattrs)
         if t0["decision"] == "deny":
             inc = self._incident(e, tool, args, f"denied by rule: {', '.join(t0['failed'])}", None)
             self.outcomes.append({"tool": tool, "args": args, "outcome": "denied", "by": "T0",
-                                  "rules": t0["failed"], "incident": inc, "seq": e["seq"]})
+                                  "rules": t0["failed"], "incident": inc, "seq": e["seq"], "pack": pack})
             return AGENT_MESSAGES["deny"]
 
         # ---- snapshot before anything changes
@@ -191,15 +193,26 @@ class Gateway:
 
         # ---- T1
         state = self._judge_state(tool, args)
+        questions = self.policy.questions_for(tool)
         verdicts = []
         for j in self.judges:
-            v = j.decide(tool, state)
+            v = j.decide(questions, state)
             verdicts.append(v)
-            self.log("t1", {**v, "questions": list(QUESTIONS[tool])}, **tattrs,
+            self.log("t1", {**v, "questions": list(questions)}, **tattrs,
                      **{"gen_ai.request.model": v["version"], "gen_ai.operation.name": "decide"})
-        decision, why = self._route(effect, verdicts)
+        decision, why = self._route(effect, verdicts, tool)
+        shadow = []
+        for j in self.shadow_judges:  # same state, same questions; recorded for comparison only
+            v = j.decide(questions, state)
+            would, _ = self._route(effect, [v], tool)
+            shadow.append({"judge": v["judge"], "kind": v["kind"], "p_violation": v["p_violation"],
+                           "per_question": v["per_question"], "latency_ms": v["latency_ms"],
+                           "usage": v["usage"], "would_route": would})
+            self.log("t1_shadow", {**v, "questions": list(questions), "would_route": would,
+                                   "used_for_routing": False}, **tattrs,
+                     **{"gen_ai.request.model": v["version"], "gen_ai.operation.name": "decide"})
         e = self.log("route", {"decision": decision, "why": why, "effect": effect,
-                               "thresholds": self.policy.routing}, **tattrs)
+                               "thresholds": self.policy.routing_for(tool)}, **tattrs)
 
         if decision == "escalate":
             t2 = self._t2(tool, args, verdicts, why)
@@ -212,20 +225,21 @@ class Gateway:
                 inc = self._incident(e, tool, args, f"escalated ({why}); T2 {t2}", snap)
                 self.outcomes.append({"tool": tool, "args": args, "outcome": "held" if t2 == "hold" else "denied",
                                       "by": "T2", "why": why, "verdicts": _vsum(verdicts), "incident": inc,
-                                      "seq": e["seq"]})
+                                      "seq": e["seq"], "shadow": shadow, "pack": pack})
                 return AGENT_MESSAGES["hold" if t2 == "hold" else "block"]
         elif decision == "block":
             inc = self._incident(e, tool, args, f"blocked by T1 ({why})", snap)
             self.outcomes.append({"tool": tool, "args": args, "outcome": "blocked", "by": "T1", "why": why,
-                                  "verdicts": _vsum(verdicts), "incident": inc, "seq": e["seq"]})
+                                  "verdicts": _vsum(verdicts), "incident": inc, "seq": e["seq"],
+                                  "shadow": shadow, "pack": pack})
             return AGENT_MESSAGES["block"]
 
         # ---- execute with executor-held credentials
         result = self.sb.execute(tool, args)
         e = self.log("execute", {"tool": tool, "result": result[:1500]}, **tattrs)
         out = {"tool": tool, "args": args, "outcome": "error" if result.startswith("error:") else "executed",
-               "verdicts": _vsum(verdicts), "seq": e["seq"]}
-        if self.rng.random() < self.policy.routing["audit_sample_rate"]:
+               "verdicts": _vsum(verdicts), "seq": e["seq"], "shadow": shadow, "pack": pack}
+        if self.rng.random() < self.policy.routing_for(tool)["audit_sample_rate"]:
             self.log("audit_sample", {"tool": tool, "note": "queued for after-the-fact review"}, **tattrs)
             out["audit_sampled"] = True
         self.outcomes.append(out)
@@ -247,8 +261,9 @@ def _summary(e: dict[str, Any]) -> str:
         return f"{b.get('tool')} {json.dumps(b.get('args', b.get('result', '')))[:160]}"
     if k == "t0":
         return f"{b['decision']} {b.get('failed') or ''}"
-    if k == "t1":
-        return f"{b['judge']} p(violation)={b['p_violation']} {b['per_question']} ({b['latency_ms']} ms)"
+    if k in ("t1", "t1_shadow"):
+        tag = " [shadow, not used for routing]" if k == "t1_shadow" else ""
+        return f"{b['judge']} p(violation)={b['p_violation']} {b['per_question']} ({b['latency_ms']} ms){tag}"
     if k in ("route", "t2"):
         return f"{b['decision']}: {b.get('why', '')}"
     if k == "snapshot":

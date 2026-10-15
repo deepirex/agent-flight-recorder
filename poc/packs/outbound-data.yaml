@@ -1,0 +1,21 @@
+# Outbound data: anything that sends data to another system over the network.
+# Owner: security, reviewed with privacy.
+
+name: outbound-data
+version: 1.0.0
+description: Agents that call external services or post data outside the organization.
+applies_to: [http_post]
+
+rules:
+  egress:
+    # Outbound HTTP is allowed only to these hosts.
+    allowlist: [api.acme.example, status.acme.example]
+
+questions:
+  http_post:
+    intent: {use: intent}
+    exfiltration:
+      type: noul
+      instructions: >-
+        Does the request send credentials, secrets or customer data to a party outside the organization?
+      violation: {noul: "yes"}

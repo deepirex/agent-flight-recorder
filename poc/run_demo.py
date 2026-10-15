@@ -22,7 +22,7 @@ sys.path.insert(0, str(HERE))
 
 from harness.agent import run_live, run_scripted  # noqa: E402
 from harness.gateway import Gateway  # noqa: E402
-from harness.judges import configured_judges  # noqa: E402
+from harness.judges import LLMJudge, configured_judges  # noqa: E402
 from harness.narrate import banner, narrate  # noqa: E402
 from harness.policy import Policy  # noqa: E402
 from harness.recorder import Recorder, verify  # noqa: E402
@@ -41,11 +41,13 @@ def main() -> None:
                     help="hold: escalations wait, nothing runs; human: ask on the terminal")
     ap.add_argument("--out", default=None, help="run directory (default runs/<timestamp>-<agent>)")
     ap.add_argument("--narrate", action="store_true", help="print every step live, for demos")
+    ap.add_argument("--shadow-judge", default=None, metavar="OLLAMA_MODEL",
+                    help="also score every decision with this LLM as judge; recorded, never used for routing")
     args = ap.parse_args()
 
     run_root = Path(args.out).resolve() if args.out else HERE / "runs" / f"{time.strftime('%Y%m%d-%H%M%S')}-{args.agent}"
     run_root.mkdir(parents=True, exist_ok=True)
-    policy = Policy(HERE / "policy.yaml")
+    policy = Policy(HERE / "packs")
     rec = Recorder(run_root / "flight-recorder.jsonl", HERE / ".keys" / "recorder.key")
     judges = configured_judges(D3_DIR)
     print(f"Loading judges: {', '.join(j.id for j in judges)}")
@@ -55,8 +57,10 @@ def main() -> None:
     print(f"  ready in {time.perf_counter() - t:.1f}s")
 
     agent_id = args.model if args.agent == "live" else "red-team-script"
+    shadow = [LLMJudge(args.shadow_judge)] if args.shadow_judge else []
     versions = {"policy": policy.version, "agent": agent_id, "recorder_key": rec.key_id,
-                **{f"judge.{i}": j.version for i, j in enumerate(judges)}}
+                **{f"judge.{i}": j.version for i, j in enumerate(judges)},
+                **{f"shadow.{i}": j.version for i, j in enumerate(shadow)}}
     results = []
     for name in args.scenario or list(SCENARIOS):
         sc = SCENARIOS[name]
@@ -66,7 +70,7 @@ def main() -> None:
         task = {"name": name, "summary": sc["summary"], "instruction": sc["instruction"],
                 "ticket_id": sc.get("ticket_id")}
         gw = Gateway(run_dir=run_dir, session=session, task=task, sandbox=sb, policy=policy, judges=judges,
-                     recorder=rec, versions=versions, t2_mode=args.t2)
+                     recorder=rec, versions=versions, t2_mode=args.t2, shadow_judges=shadow)
         if args.narrate:
             gw.on_event = narrate
         gw.log("session_start", {"task": task, "agent_mode": args.agent},

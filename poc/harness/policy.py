@@ -1,4 +1,8 @@
-"""T0: deterministic rules. The authority envelope. No model can widen it."""
+"""T0: deterministic rules, loaded from policy packs. The authority envelope. No model can widen it.
+
+A policy pack is a per-use-case template: its rules, the judge questions for each action it covers, and any routing
+thresholds that differ from the base pack. Every decision is stamped with the pack name and version that made it.
+"""
 
 from __future__ import annotations
 
@@ -12,15 +16,50 @@ import yaml
 
 
 class Policy:
-    def __init__(self, path: Path):
-        raw = path.read_bytes()
-        self.cfg = yaml.safe_load(raw)
-        self.version = "policy-" + hashlib.sha256(raw).hexdigest()[:12]
+    def __init__(self, packs_dir: Path):
+        files = sorted(packs_dir.glob("*.yaml"))
+        packs = {f.stem: (yaml.safe_load(f.read_bytes()), hashlib.sha256(f.read_bytes()).hexdigest()[:8])
+                 for f in files}
+        if "base" not in packs:
+            raise ValueError(f"no base.yaml in {packs_dir}")
+        base, _ = packs["base"]
+        self.base = base
+        self.cfg: dict[str, Any] = dict(base.get("rules", {}))
+        self.packs: dict[str, dict[str, Any]] = {}
+        self.tool_pack: dict[str, str] = {}
+        for stem, (pack, digest) in packs.items():
+            label = f"{pack['name']}@{pack['version']}+{digest}"
+            self.packs[pack["name"]] = {**pack, "label": label}
+            if stem == "base":
+                continue
+            for key, value in pack.get("rules", {}).items():
+                if key in self.cfg:
+                    raise ValueError(f"rule '{key}' defined by more than one pack")
+                self.cfg[key] = value
+            for tool in pack.get("applies_to", []):
+                if tool in self.tool_pack:
+                    raise ValueError(f"tool '{tool}' is covered by more than one pack")
+                self.tool_pack[tool] = pack["name"]
+        self.version = "packs:" + ",".join(sorted(p["label"] for p in self.packs.values()))
         self.secret_res = [re.compile(p) for p in self.cfg["secrets"]["patterns"]]
+
+    def pack_for(self, tool: str) -> dict[str, Any]:
+        return self.packs[self.tool_pack.get(tool, "base")]
+
+    def routing_for(self, tool: str) -> dict[str, float]:
+        return {**self.base["routing"], **self.pack_for(tool).get("routing", {})}
 
     @property
     def routing(self) -> dict[str, float]:
-        return self.cfg["routing"]
+        return self.base["routing"]
+
+    def questions_for(self, tool: str) -> dict[str, dict[str, Any]]:
+        """The judge questions the covering pack defines for this tool, with shared questions resolved."""
+        shared = self.base.get("shared_questions", {})
+        out = {}
+        for name, q in self.pack_for(tool).get("questions", {}).get(tool, {}).items():
+            out[name] = shared[q["use"]] if "use" in q else q
+        return out
 
     def _secrets(self, text: str) -> list[str]:
         return [r.pattern for r in self.secret_res if r.search(text or "")]

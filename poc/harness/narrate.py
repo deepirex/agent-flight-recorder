@@ -51,6 +51,10 @@ def narrate(e: dict[str, Any]) -> None:
         p = _c("bold", "%.2f" % b["p_violation"])
         detail = _c("dim", "%s %.2f · %.1fs" % (name, val, b["latency_ms"] / 1000))
         out = f"{seq}   JUDGE   d3-flash  p(violation) {p}  {detail}"
+    elif k == "t1_shadow":
+        p = "%.2f" % b["p_violation"]
+        detail = "would %s · %.1fs · shadow, not used" % (b["would_route"], b["latency_ms"] / 1000)
+        out = f"{seq}   {_c('dim', 'SHADOW  ' + b['judge'].split('@')[0] + '  p(violation) ' + p + '  ' + detail)}"
     elif k == "route":
         col = {"allow": "green", "block": "red", "escalate": "yellow"}[b["decision"]]
         out = f"{seq}   {_c(col, 'ROUTE   ' + b['decision'].upper())}"
