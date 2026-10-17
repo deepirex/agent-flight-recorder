@@ -54,7 +54,9 @@ def narrate(e: dict[str, Any]) -> None:
     elif k == "t1_shadow":
         p = "%.2f" % b["p_violation"]
         detail = "would %s · %.1fs · shadow, not used" % (b["would_route"], b["latency_ms"] / 1000)
-        out = f"{seq}   {_c('dim', 'SHADOW  ' + b['judge'].split('@')[0] + '  p(violation) ' + p + '  ' + detail)}"
+        how = "token probs" if b["judge"].endswith("/logprobs") else "stated"
+        who = b["judge"].split("@")[0].split(":")[0] + " (" + how + ")"
+        out = f"{seq}   {_c('dim', 'SHADOW  ' + who.ljust(20) + ' p(violation) ' + p + '  ' + detail)}"
     elif k == "route":
         col = {"allow": "green", "block": "red", "escalate": "yellow"}[b["decision"]]
         out = f"{seq}   {_c(col, 'ROUTE   ' + b['decision'].upper())}"

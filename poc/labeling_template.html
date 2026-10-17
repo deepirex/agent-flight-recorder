@@ -1,0 +1,304 @@
+<title>Blind Review: Agent Actions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one case at a time in a reading column, a compact case map beside it on wide screens. */
+:root {
+  --paper: #EDF1F5; --panel: #F9FBFC; --ink: #0F1B2D; --muted: #566376; --rule: #C6D0DB;
+  --orange: #FF5A1F; --orange-ink: #B23A0D; --on-orange: #1A0A02;
+  --go: #1C7A4B; --hold: #9A6200; --stop: #B42318; --go-bg: #DDF0E5; --hold-bg: #F7EBD3; --stop-bg: #F8DEDA;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "Source Serif 4", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0C131D; --panel: #121C29; --ink: #E4EAF1; --muted: #93A1B4; --rule: #263448;
+    --orange: #FF6A30; --orange-ink: #FF8E5E; --go: #55C891; --hold: #E5AA44; --stop: #F2776C;
+    --go-bg: #12301F; --hold-bg: #33260C; --stop-bg: #3A1714; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0C131D; --panel: #121C29; --ink: #E4EAF1; --muted: #93A1B4; --rule: #263448;
+  --orange: #FF6A30; --orange-ink: #FF8E5E; --go: #55C891; --hold: #E5AA44; --stop: #F2776C;
+  --go-bg: #12301F; --hold-bg: #33260C; --stop-bg: #3A1714; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 1.05rem; line-height: 1.55;
+  padding-inline: 18px; padding-block: 0 4rem; margin: 0; }
+.wrap { max-width: 72rem; margin-inline: auto; }
+header { padding-block: 2.2rem 1.2rem; max-width: 46rem; }
+.tag { display: inline-block; background: var(--orange); color: var(--on-orange); font-family: var(--mono);
+  font-weight: 600; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; padding: .35rem .6rem; }
+h1 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(2.2rem, 6vw, 3.6rem);
+  line-height: .9; margin: .9rem 0 .8rem; text-wrap: balance; }
+h1 span { color: var(--orange-ink); }
+header p { margin: .4rem 0; max-width: 42rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; margin-top: .9rem; font-size: .95rem; }
+.legend b { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+  padding: .12rem .45rem; border-radius: 2px; }
+.lg-a { background: var(--go-bg); color: var(--go); } .lg-r { background: var(--hold-bg); color: var(--hold); }
+.lg-b { background: var(--stop-bg); color: var(--stop); }
+.notice { margin-top: 1rem; padding: .7rem .9rem; border: 1px solid var(--rule); border-left: 3px solid var(--hold);
+  background: var(--panel); font-size: .92rem; max-width: 46rem; }
+.notice[hidden] { display: none; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.6rem; }
+@media (min-width: 980px) { .grid { grid-template-columns: minmax(0, 1fr) 15rem; } }
+
+.bar { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between;
+  font-family: var(--mono); font-size: .76rem; color: var(--muted); margin-bottom: .7rem; }
+.progress { flex: 1 1 12rem; height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .3s; }
+
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 1.2rem 1.3rem; }
+.card-h { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: baseline; margin-bottom: .6rem; }
+.card-h h2 { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 1.6rem; margin: 0;
+  letter-spacing: .02em; }
+.chip { font-family: var(--mono); font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  padding: .12rem .45rem; border-radius: 2px; background: var(--rule); color: var(--ink); }
+.sec { margin-top: 1rem; }
+.sec h3 { font-family: var(--mono); font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--orange-ink); margin: 0 0 .35rem; }
+.sec p { margin: .2rem 0; }
+.kv { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: .25rem .8rem; font-size: .95rem; }
+.kv dt { font-family: var(--mono); font-size: .74rem; color: var(--muted); padding-top: .2rem; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.action { border-left: 3px solid var(--orange); padding-left: .8rem; }
+pre { margin: .3rem 0 0; padding: .7rem .8rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px;
+  font-family: var(--mono); font-size: .78rem; line-height: 1.5; overflow-x: auto; white-space: pre; }
+pre .add { color: var(--go); } pre .del { color: var(--stop); }
+.empty { color: var(--muted); font-style: italic; }
+
+.decide { margin-top: 1.3rem; padding-top: 1rem; border-top: 2px solid var(--ink); }
+.choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+@media (max-width: 520px) { .choices { grid-template-columns: 1fr; } }
+.choices button { font-family: var(--body); font-size: 1rem; text-align: left; padding: .7rem .8rem; cursor: pointer;
+  border: 2px solid var(--rule); border-radius: 4px; background: var(--paper); color: var(--ink); line-height: 1.3; }
+.choices button b { display: block; font-family: var(--display); font-weight: 800; text-transform: uppercase;
+  font-size: 1.15rem; letter-spacing: .03em; }
+.choices button span { font-size: .85rem; color: var(--muted); }
+.choices button kbd { float: right; font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+.choices button[data-v="allow"][aria-pressed="true"] { border-color: var(--go); background: var(--go-bg); }
+.choices button[data-v="review"][aria-pressed="true"] { border-color: var(--hold); background: var(--hold-bg); }
+.choices button[data-v="block"][aria-pressed="true"] { border-color: var(--stop); background: var(--stop-bg); }
+.choices button:disabled { cursor: not-allowed; opacity: .6; }
+label.note { display: block; margin-top: .8rem; font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+textarea { width: 100%; margin-top: .3rem; min-height: 3.2rem; font-family: var(--body); font-size: .95rem; padding: .5rem .6rem;
+  border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink); resize: vertical; }
+.nav { display: flex; justify-content: space-between; gap: .6rem; margin-top: .9rem; }
+.nav button { font-family: var(--mono); font-size: .8rem; padding: .5rem .8rem; border: 1px solid var(--ink); background: transparent;
+  color: var(--ink); border-radius: 3px; cursor: pointer; }
+.nav button.primary { background: var(--ink); color: var(--paper); }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+aside h3 { font-family: var(--mono); font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--orange-ink); margin: 0 0 .5rem; }
+.map { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.3rem, 1fr)); gap: .3rem; }
+.map button { font-family: var(--mono); font-size: .72rem; padding: .35rem 0; border: 1px solid var(--rule); background: var(--panel);
+  color: var(--muted); border-radius: 2px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.map button.cur { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.map button.allow { background: var(--go-bg); color: var(--go); } .map button.review { background: var(--hold-bg); color: var(--hold); }
+.map button.block { background: var(--stop-bg); color: var(--stop); }
+.role { margin-top: 1.2rem; font-size: .9rem; }
+.role input { width: 100%; margin-top: .3rem; font-family: var(--body); font-size: .95rem; padding: .45rem .55rem; border: 1px solid var(--rule);
+  border-radius: 3px; background: var(--paper); color: var(--ink); }
+.done { margin-top: 1rem; padding: 1rem 1.1rem; border: 2px solid var(--go); border-radius: 4px; background: var(--go-bg); }
+.done[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="tag">Blind review · 50 decisions</span>
+    <h1>Would you let <span>this run?</span></h1>
+    <p>An AI agent worked through everyday jobs in a simulated company: support tickets, refunds, emails, code fixes, outbound requests. Each card shows one action it wanted to take, with the context it had. All people, companies and data are fictional.</p>
+    <p>For each one, decide what should happen. Go with your judgment; there's no trick. You won't see what any person or model decided, and nobody else sees your answers.</p>
+    <div class="legend">
+      <span><b class="lg-a">Allow</b> safe to run automatically</span>
+      <span><b class="lg-r">Needs a person</b> someone should look first</span>
+      <span><b class="lg-b">Block</b> should be stopped</span>
+    </div>
+    <div class="notice" id="notice" hidden></div>
+  </header>
+
+  <div class="grid">
+    <main>
+      <div class="bar"><span id="count">0 of 50 decided</span><div class="progress" aria-hidden="true"><i id="prog"></i></div><span id="saved">Not saved yet</span></div>
+      <section class="card" id="card" aria-live="polite"></section>
+      <div class="done" id="done" hidden><b>All 50 decided. Thank you.</b> Your answers are saved; you can still revisit any case.</div>
+    </main>
+    <aside>
+      <h3>Cases</h3>
+      <div class="map" id="map"></div>
+      <div class="role"><label for="role">Your role (optional)</label><input id="role" maxlength="80" placeholder="e.g. support lead, security engineer"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const CASES = __CASES_JSON__;
+const TOOL = { issue_refund: "Refund", send_email: "Email", write_file: "Code change", http_post: "Outbound request",
+               git_commit: "Commit", git_push: "Push" };
+const state = { cur: 0, answers: {}, role: "" };
+let db = null, uid = null, ref = null, writing = Promise.resolve(), dirty = false;
+
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "class") n.className = v; else n.setAttribute(k, v); }
+  for (const k of kids) n.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return n;
+}
+function kv(pairs) {
+  const dl = el("dl", { class: "kv" });
+  for (const [k, v] of pairs) if (v !== undefined && v !== null && v !== "") dl.append(el("dt", {}, k), el("dd", {}, v));
+  return dl;
+}
+function money(x) { return typeof x === "number" ? "$" + x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : x; }
+function diffBlock(text) {
+  const pre = el("pre");
+  for (const line of String(text || "").split("\n")) {
+    const cls = line.startsWith("+") && !line.startsWith("+++") ? "add" : line.startsWith("-") && !line.startsWith("---") ? "del" : "";
+    pre.append(el("span", cls ? { class: cls } : {}, line + "\n"));
+  }
+  return pre;
+}
+function section(title, ...kids) { return el("div", { class: "sec" }, el("h3", {}, title), ...kids); }
+
+function renderCase() {
+  const c = CASES[state.cur], s = c.state, a = s.proposed_action || {};
+  const card = $("card");
+  card.replaceChildren();
+  card.append(el("div", { class: "card-h" }, el("h2", {}, `Case ${state.cur + 1}`), el("span", { class: "chip" }, TOOL[c.tool] || c.tool)));
+  card.append(section("The agent's task", el("p", {}, s.task || "")));
+  if (s.ticket) {
+    const t = s.ticket;
+    card.append(section("The ticket", kv([["From", t.from], ["Subject", t.subject], ["Message", t.body], ["Internal note", t.internal_note]])));
+  }
+  const act = el("div", { class: "action" });
+  if (c.tool === "issue_refund") act.append(kv([["Refund to", a.customer], ["Amount", money(a.amount)], ["Reason", a.reason]]));
+  else if (c.tool === "send_email") act.append(kv([["To", a.to], ["Subject", a.subject], ["Body", a.body]]));
+  else if (c.tool === "write_file") act.append(kv([["File", a.path]]), diffBlock(a.diff));
+  else if (c.tool === "http_post") act.append(kv([["To URL", a.url], ["Data sent", a.body]]));
+  else if (c.tool === "git_commit") act.append(kv([["Branch", a.branch], ["Message", a.message]]), s.pending_diff ? diffBlock(s.pending_diff) : "");
+  else if (c.tool === "git_push") act.append(kv([["Branch", a.branch], ["Force", a.force ? "yes" : "no"]]), s.pending_diff ? diffBlock(s.pending_diff) : "");
+  else act.append(el("pre", {}, JSON.stringify(a, null, 2)));
+  card.append(section("What the agent wants to do", act));
+  const done = s.actions_already_taken || [];
+  card.append(section("Already done this session", done.length
+    ? el("ul", {}, ...done.map(d => el("li", {}, `${TOOL[d.tool] || d.tool}: ${Object.entries(d.args || {}).map(([k, v]) => `${k} ${k === "amount" ? money(v) : v}`).join(", ")}`)))
+    : el("p", { class: "empty" }, "Nothing yet.")));
+  if (s.customer_record) {
+    const r = s.customer_record;
+    card.append(section("Customer record", kv([["Name", r.name], ["Email", r.email],
+      ["Charges", (r.charges || []).map(ch => `Order ${ch.order}: ${money(ch.amount)} on ${ch.date}${ch.flag ? " (" + ch.flag + ")" : ""}`).join("\n")],
+      ["Notes", r.notes]])));
+  }
+  if (s.recipient) card.append(section("Recipient", kv([["Email", s.recipient.email], ["Customer", s.recipient.customer_id || "not a known customer"]])));
+
+  const ans = state.answers[c.id] || {};
+  const choices = el("div", { class: "choices", role: "group", "aria-label": "Your decision" });
+  for (const [v, t, d, k] of [["allow", "Allow", "Safe to run automatically", "1"], ["review", "Needs a person", "Someone should look first", "2"], ["block", "Block", "Should be stopped", "3"]]) {
+    const b = el("button", { type: "button", "data-v": v, "aria-pressed": ans.label === v ? "true" : "false", id: "choice-" + v },
+      el("kbd", {}, k), el("b", {}, t), el("span", {}, d));
+    b.addEventListener("click", () => choose(v));
+    choices.append(b);
+  }
+  const note = el("textarea", { id: "note", placeholder: "Optional: why?" });
+  note.value = ans.note || "";
+  note.addEventListener("change", () => { if (state.answers[c.id]) { state.answers[c.id].note = note.value.slice(0, 500); save(); } });
+  const prev = el("button", { type: "button" }, "← Previous");
+  const next = el("button", { type: "button", class: "primary" }, state.cur === CASES.length - 1 ? "Finish" : "Next →");
+  prev.addEventListener("click", () => go(state.cur - 1));
+  next.addEventListener("click", () => go(state.cur + 1));
+  card.append(el("div", { class: "decide" }, choices, el("label", { class: "note", for: "note" }, "Note"), note, el("div", { class: "nav" }, prev, next)));
+  renderMap();
+}
+
+function renderMap() {
+  const map = $("map");
+  map.replaceChildren(...CASES.map((c, i) => {
+    const a = state.answers[c.id];
+    const b = el("button", { type: "button", class: (a ? a.label : "") + (i === state.cur ? " cur" : ""), "aria-label": `Case ${i + 1}${a ? ", " + a.label : ""}` }, i + 1);
+    b.addEventListener("click", () => go(i));
+    return b;
+  }));
+  const n = Object.keys(state.answers).length;
+  $("count").textContent = `${n} of ${CASES.length} decided`;
+  $("prog").style.width = (100 * n / CASES.length) + "%";
+  $("done").hidden = n < CASES.length;
+}
+
+function go(i) {
+  if (i < 0 || i >= CASES.length) return;
+  state.cur = i;
+  renderCase();
+  window.scrollTo({ top: $("card").offsetTop - 16, behavior: "smooth" });
+}
+
+function choose(v) {
+  const c = CASES[state.cur];
+  const note = $("note") ? $("note").value.slice(0, 500) : "";
+  state.answers[c.id] = { label: v, note, at: new Date().toISOString() };
+  save();
+  renderCase();
+  setTimeout(() => { if (state.cur < CASES.length - 1) go(state.cur + 1); }, 220);
+}
+
+function save() {
+  if (!ref) { $("saved").textContent = "Not saving in this view"; return; }
+  dirty = true;
+  writing = writing.then(async () => {
+    if (!dirty) return;
+    dirty = false;
+    $("saved").textContent = "Saving…";
+    try {
+      await ref.set({ answers: state.answers, role: state.role, updated: new Date().toISOString(), version: 1 });
+      $("saved").textContent = "Saved";
+    } catch (e) {
+      $("saved").textContent = "Couldn't save";
+      notice("Your answers couldn't be saved. You need at least Contributor access to this page; ask whoever shared it to change your access, then reload.");
+    }
+  });
+}
+
+function notice(t) { const n = $("notice"); n.textContent = t; n.hidden = false; }
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  if (e.key === "1") choose("allow"); else if (e.key === "2") choose("review"); else if (e.key === "3") choose("block");
+  else if (e.key === "ArrowRight") go(state.cur + 1); else if (e.key === "ArrowLeft") go(state.cur - 1);
+});
+$("role").addEventListener("change", (e) => { state.role = e.target.value.slice(0, 80); save(); });
+
+renderCase();
+
+(async () => {
+  const c = window.claude;
+  if (!c || !c.use) { notice("Answers save only when this page is opened from its claude.ai link while signed in. You can look through the cases here, but nothing will be kept."); return; }
+  const [dbNs, userNs] = await Promise.all([c.use("db"), c.use("user")]);
+  uid = userNs ? await userNs.id() : null;
+  if (!dbNs || !uid) { notice("Answers save only when you're signed in to claude.ai with access to this page. You can look through the cases, but nothing will be kept."); return; }
+  db = dbNs;
+  ref = db.doc("labels/" + uid);
+  try {
+    const snap = await ref.get();
+    if (snap.exists) {
+      const d = snap.data();
+      state.answers = d.answers || {};
+      state.role = d.role || "";
+      $("role").value = state.role;
+      const first = CASES.findIndex(cs => !state.answers[cs.id]);
+      state.cur = first === -1 ? 0 : first;
+      $("saved").textContent = "Resumed";
+      renderCase();
+    } else {
+      $("saved").textContent = "Ready";
+    }
+  } catch (e) {
+    $("saved").textContent = "Offline";
+  }
+})();
+</script>

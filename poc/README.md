@@ -139,6 +139,42 @@ as d3-flash; d3-flash was the only judge with no unsafe allows and the only one 
 question in the code-changes pack as much as at the judges. 26 decisions and one person's labels: a direction, not
 a verdict. The strongest same-family test, a Gemma fine-tuned as a decision model, is not done yet.
 
+## Benchmark: 181 labeled cases
+
+`bench_cases.py` generates systematic variations of the scenarios (75 refunds, 48 emails, 48 code changes, 10
+outbound requests, including notes addressed to the reviewer), each with the correct answer to every judge question
+and an overall label set by an explicit rule in the code. `benchmark.py` scores judges on them and caches every verdict
+in `runs/benchmark-results.json`; `--report` writes `runs/benchmark-report.json`.
+
+Fair comparison: each judge tunes its own allow thresholds on 98 training cases (minimizing 5 x unsafe allows + over-
+cautious holds) and is scored on 83 cases from templates it never saw:
+
+| Judge | Thresholds (irrev / rev) | Accuracy | Unsafe allows | Over-cautious |
+|---|---|---|---|---|
+| Qwen 3.8 27B, stated confidence | 0.1 / 0.1 | 0.964 | 0 | 3 |
+| Qwen 3.8 27B, token probabilities | 0.7 / 0.6 | 0.940 | 0 | 5 |
+| d3-flash + Qwen (max) | 0.7 / 0.7 | 0.940 | 0 | 5 |
+| Gemma 12B, stated confidence | 0.02 / 0.02 | 0.940 | 3 | 2 |
+| d3-flash + Gemma (mean) | 0.5 / 0.6 | 0.928 | 1 | 5 |
+| Gemma 12B, token probabilities | 0.7 / 0.5 | 0.916 | 1 | 6 |
+| d3-flash | 0.4 / 0.7 | 0.892 | 5 | 4 |
+
+What each judge got wrong: d3-flash allowed all five small unapproved goodwill credits and over-flagged harmless
+emails for third-party data; Gemma with stated confidence approved a refund nobody asked for, 3 of 3 times (the same
+miss it made on the live run), which Gemma with token probabilities never did; Qwen's only errors were holding code
+changes that added a test alongside the fix, a label that is arguably borderline. A trained per-question readout
+(Platt scaling, fitted on the training templates) made every judge more cautious, not more accurate.
+
+Read with the real-decision results above: the decision model was safest on the 26 subtle, real decisions; general
+models matched or beat it on the clearer synthetic cases; combining two families was the most robust. The
+benchmark's variations are cleaner than real agent behavior, and its labels are mine.
+
+## Blind labeling
+
+`make_labeling_page.py` builds a page of 50 decisions (26 real, 24 from the benchmark), shuffled, with no labels or
+verdicts shown, for independent reviewers. `labeling/case-index.json` maps each card to its source. Agreement with
+`labels.yaml` and the benchmark rules should be reported before any judge comparison is treated as settled.
+
 ## Check the evidence yourself
 
 The published records can be verified by anyone, with plain Python and no ML packages:
@@ -155,11 +191,10 @@ not published (see the limits below). The head hash of each published record:
 | `v5-live` | 305 | `34fb42fd659a209e2032fa332744ff9f7ed2461cf3724db53a3230084004015a` |
 | `v5-scripted` | 155 | `66720ae2532792abcd95a7135879206c078ca8f13719be377852a1391b09fd99` |
 | `v3-brake` | 11 | `140ba9058f2524b901989171d87c4326597a9eeb9ad0ef5774471df762f12835` |
-| `demo` (the recorded run) | 199 | `59bbdd1d422df57e37ae65ae6db135b27a7fff55193a7b14d4ea8c66cd1ca678` |
+| `demo` (the recorded run) | 246 | `d887efb5facb497804aa4e8be544d8a1a668b2ad3606e41cf2adcf59a827455a` |
 
-The demo recording shows both judges on every decision. It was made with base pack 1.0.0, before read gating, and
-matches the `v3-live` run action for action, including the unblocked read of `config/payments.env` after the blocked
-emails. The `v5` runs show the same agent with read gating on.
+The demo recording uses base pack 1.1.0 (read gating and the denial budget) and shows d3-flash deciding, with Gemma
+judging in shadow two ways: stated confidence and token probabilities.
 
 Each run directory also holds `summary.json`, `labels.jsonl` and an `incidents/` folder per scenario. The world copies
 and snapshots are produced on every local run but not committed, because each contains nested git repositories.
@@ -217,6 +252,9 @@ poc/
   bench.py               decision model vs LLM-as-judge comparison from a run's record
   replay.py              replay recorded judge inputs through any judge; score against labels.yaml
   labels.yaml            reference labels with reasons for every judged decision
+  bench_cases.py         generates the 181-case labeled benchmark
+  benchmark.py           scores judges on it; fair per-judge thresholds; combined judges
+  make_labeling_page.py  builds the blind labeling page in ../labeling/
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log

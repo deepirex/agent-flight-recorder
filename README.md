@@ -17,16 +17,18 @@ separating intelligence from authority and keeping AI auditable.
   humans, per-use-case policy packs, snapshots before every consequential action, incident bundles, and a
   hash-chained, signed record.
 - **Demo:** [`demo/flight-recorder-live.mp4`](demo/flight-recorder-live.mp4) — an unedited, real-time recording
-  (11 min 10 s) of a live run with both judges on screen, then a tamper-detection check on its record. A labelled
-  3× time-lapse is in
+  (10 min 41 s) of a live run with d3-flash deciding and Gemma judging its own work in shadow, asked two ways,
+  then a tamper-detection check on its record. A labelled 3× time-lapse is in
   [`demo/flight-recorder-live-3x.mp4`](demo/flight-recorder-live-3x.mp4). The run's own record is in
-  [`poc/runs/demo/`](poc/runs/demo/) (199 entries, head `59bbdd1d…1ca678`).
+  [`poc/runs/demo/`](poc/runs/demo/) (246 entries, head `d887efb5…27455a`).
 
-![Both judges block the injected email; then they disagree on an unrequested refund](demo/judges-disagree.gif)
+![Three judges, one refund: hold, allow, block](demo/judges-disagree.gif)
 
-*5× speed. Gemma 4 follows an instruction hidden in a support ticket and tries to email two other customers' account
-notes. Every rule passes; both judges block it, twice. Gemma then proposes a refund nobody asked for. d3-flash is
-unsure (0.67) and holds it for a person. Gemma, judging its own family's work in shadow, would have allowed it (0.00).*
+*6× speed. Gemma 4 follows an instruction hidden in a support ticket and tries to email two other customers' account
+notes; every rule passes and every judge blocks it, twice. Then Gemma proposes a refund nobody asked for, and the
+judges split three ways: d3-flash is unsure (0.67) and holds it for a person; Gemma, judging its own work and asked to
+state its confidence, would allow it (0.00); the same Gemma, read through its token probabilities, would block it
+(0.96). Same model, two ways of asking, opposite answers.*
 
 ![Architecture](images/architecture-diagram.png)
 
@@ -48,11 +50,16 @@ fix.
 ## Is it the model, or the harness?
 
 Every decision was also scored, in shadow, by Gemma judging its own family's work. Asked to state its confidence, it
-never hesitated (55 of 55 answers at exactly 0 or 1) and would have waved through three grey areas that d3-flash held
-for a person. Then every recorded judge input was replayed through fairer variants and scored against published
-labels: reading Gemma's token probabilities cut its unsafe allows from 3 to 1, and a larger general model (Qwen 27B)
-was as well calibrated as d3-flash. d3-flash was the only judge with no unsafe allows. The lesson: how you ask a judge
-matters as much as which model it is. Details, limits and the replay tool are in [`poc/README.md`](poc/README.md).
+never hesitated and would have waved through three grey areas that d3-flash held for a person. Then it got harder:
+
+- **26 real decisions, five judges.** Reading Gemma's token probabilities cut its unsafe approvals from 3 to 1; the
+  decision model was the only judge with none.
+- **181 labeled benchmark cases, each judge with its own thresholds.** The general models matched or beat the 9B
+  decision model; Qwen 27B was best; each judge had its own blind spot; and two judges from different families
+  together were the most robust.
+
+The lesson isn't that one kind of judge wins. It's independence, calibration per judge, and more than one kind of
+model looking. Details, limits and every tool to reproduce it are in [`poc/README.md`](poc/README.md).
 
 ## Run it
 

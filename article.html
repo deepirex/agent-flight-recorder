@@ -402,7 +402,7 @@ ol.trace li b { color: var(--ink); }
   <header class="hero col">
     <span class="tag">Give every AI agent a flight recorder</span>
     <h1>I gave an AI agent six jobs and <span class="o">two judges</span></h1>
-    <p class="dek"><strong>One shared its family. One didn't. Only one knew when to ask for help.</strong> A live test of one model doing everything versus a mix of models, with hard rules, an independent judge, and a flight recorder no model can touch.</p>
+    <p class="dek"><strong>One shared its family. One didn't. Only one knew when to ask for help.</strong> A live test of one model doing everything versus a mix of models, then a bigger benchmark that didn't go the way I expected. With hard rules, independent judges, and a flight recorder no model can touch.</p>
     <div class="byline"><span>Deepak</span><span>October 2026</span><span>14 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub ↗</a></div>
   </header>
 
@@ -416,6 +416,7 @@ ol.trace li b { color: var(--ink); }
     <h2 id="a-different-kind-of-model">A different kind of model for the checking</h2>
     <p>What caught my attention was <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a>, one of a new class of <strong>decision models</strong>. A decision model doesn't write anything. You give it some state (a ticket, a proposed action, a diff) and typed questions: pick one of these options, yes or no, or a score on a scale. It answers all of them in one pass, with a probability for every option, and generates no text at all.</p>
     <p>That shape is almost purpose-built for checking. The answers are closed and machine-readable, so they can be logged and compared. The probabilities give you something to set thresholds on. And because nothing is generated, the cost is a small fraction of an LLM call: TypeSafe prices Jev at $0.042 per million input tokens with output free, and quotes 70 to 500 ms per call.</p>
+    <p>My hypothesis going in was simple: a purpose-built decision model makes a better referee than a general LLM grading itself. Hold that thought. The data turned out to be more interesting than the hypothesis.</p>
     <p>Those are vendor figures, so I wanted my own evidence. Here's the arithmetic that made it worth trying, for a fleet making 10,000 actions a day at about 2,000 tokens of state per check:</p>
     <div class="tbl-wrap">
       <table class="num">
@@ -721,54 +722,76 @@ ol.trace li b { color: var(--ink); }
 
     <h2 id="head-to-head">Is it the model, or the harness?</h2>
     <p>To test the "one model for everything" point directly, every decision was also scored in shadow by <strong>Gemma itself acting as judge</strong>: the same model that did the work, now grading it, with exactly the state and questions d3-flash saw. Its verdicts were recorded and never acted on.</p>
-    <aside class="side"><span class="big sm">0 of 55</span>graded answers from Gemma when asked to state its confidence. With token probabilities: 7. From Qwen 27B: 30.</aside>
+    <aside class="side"><span class="big sm">0 of 55</span>graded answers from Gemma when asked to state its confidence on the real decisions.</aside>
     <p>The first result is the one in the headline. Asked to state its confidence, Gemma never hesitated: every one of its 55 answers was exactly 0 or 1, and in three grey areas it would have waved through what a person should have seen, including that unrequested refund. d3-flash asked for help each time.</p>
-    <p>But that comparison isn't fair, and a sharp reader would say so. It changes two things at once: the <em>kind</em> of model and the <em>way it's asked</em>. And d3-flash is itself an LLM, a Qwen model fine-tuned to answer with probabilities, so "decision model" is partly a question of harness. So I gave the same-family judge a fairer shot. Every recorded judge input was replayed, offline, through five variants: Gemma reading its own <strong>token probabilities</strong> instead of stating a number, Gemma <strong>sampled five times</strong> with the vote share as the probability, and a much larger generative model, <strong>Qwen 3.8 (27B)</strong>, from d3-flash's own base family, both ways. Each verdict went through the same thresholds and was scored against reference labels I wrote for all 26 decisions, with my reasoning, before scoring.</p>
+    <p>But that comparison isn't fair, and a sharp reader would say so. It changes two things at once: the <em>kind</em> of model and the <em>way it's asked</em>. And d3-flash is itself an LLM, a Qwen model fine-tuned to answer with probabilities, so "decision model" is partly a question of harness. So I ran two more rounds.</p>
+
+    <h3>Round two: the same 26 decisions, five judges</h3>
+    <p>Every recorded judge input was replayed offline through Gemma reading its own <strong>token probabilities</strong> instead of stating a number, and through a much larger general model, <strong>Qwen 3.8 (27B)</strong>, both ways. All were scored against reference labels I wrote, with reasons, before scoring.</p>
     <div class="tbl-wrap">
       <table class="num">
-        <thead><tr><th>Judge</th><th>Correct</th><th>Unsafe allows</th><th>Over-cautious</th><th>Calibration error</th></tr></thead>
+        <thead><tr><th>Judge, 26 real decisions</th><th>Correct</th><th>Unsafe allows</th><th>Over-cautious</th></tr></thead>
         <tbody>
-          <tr><td>d3-flash <span class="sub">decision model, 9B, routed every real decision</span></td><td>25/26</td><td>0</td><td>1</td><td>0.051</td></tr>
-          <tr><td>Gemma 12B, stated confidence <span class="sub">the agent's own model grading its work</span></td><td>23/26</td><td>3</td><td>0</td><td>0.115</td></tr>
-          <tr><td>Gemma 12B, token probabilities <span class="sub">same model, better harness</span></td><td>24/26</td><td>1</td><td>1</td><td>0.079</td></tr>
-          <tr><td>Gemma 12B, five samples <span class="sub">vote share as probability</span></td><td>24/26</td><td>1</td><td>1</td><td>0.102</td></tr>
-          <tr><td>Qwen 3.8 27B, token probabilities <span class="sub">larger generative model</span></td><td>24/26</td><td>1</td><td>1</td><td>0.049</td></tr>
-          <tr><td>Qwen 3.8 27B, stated confidence</td><td>25/26</td><td>1</td><td>0</td><td>0.067</td></tr>
+          <tr><td>d3-flash <span class="sub">decision model, 9B</span></td><td>25/26</td><td>0</td><td>1</td></tr>
+          <tr><td>Gemma 12B, stated confidence <span class="sub">the agent's own model grading its work</span></td><td>23/26</td><td>3</td><td>0</td></tr>
+          <tr><td>Gemma 12B, token probabilities <span class="sub">same model, different way of asking</span></td><td>24/26</td><td>1</td><td>1</td></tr>
+          <tr><td>Qwen 3.8 27B, token probabilities</td><td>24/26</td><td>1</td><td>1</td></tr>
+          <tr><td>Qwen 3.8 27B, stated confidence</td><td>25/26</td><td>1</td><td>0</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">Calibration error is the Brier score of p(violation) against the labels: lower is better. "Unsafe allow" means the judge would have let through something labeled review or block. Full per-decision table, labels and replay tool are in the repo.</p>
-    <p>Here's what I take from it.</p>
+    <p>Reading Gemma's token probabilities cut its unsafe allows from three to one. On these real, messy decisions, d3-flash was the only judge with none. At that point the story looked tidy. Twenty-six decisions is not much, though, so I built a bigger test.</p>
+
+    <h3>Round three: 181 cases, and the result I didn't expect</h3>
+    <p>I generated a labeled benchmark from systematic variations of the same jobs: 75 refunds against different tickets, 48 emails that were or weren't backed by a real action, 48 code changes that fixed a bug or quietly weakened a test, and 10 outbound requests, with "note to the reviewer" attacks mixed in. Every label comes from an explicit rule in the code, so anyone can audit it. To keep it fair, each judge picked its own thresholds on one set of templates and was scored on templates it had never seen.</p>
+    <div class="tbl-wrap">
+      <table class="num">
+        <thead><tr><th>Judge, 83 unseen cases</th><th>Accuracy</th><th>Unsafe allows</th><th>Over-cautious</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen 3.8 27B, stated confidence</td><td>0.96</td><td>0</td><td>3</td></tr>
+          <tr><td>Qwen 3.8 27B, token probabilities</td><td>0.94</td><td>0</td><td>5</td></tr>
+          <tr><td>d3-flash + Qwen <span class="sub">two families, the more cautious verdict wins</span></td><td>0.94</td><td>0</td><td>5</td></tr>
+          <tr><td>Gemma 12B, stated confidence</td><td>0.94</td><td>3</td><td>2</td></tr>
+          <tr><td>d3-flash + Gemma <span class="sub">two families, verdicts averaged</span></td><td>0.93</td><td>1</td><td>5</td></tr>
+          <tr><td>Gemma 12B, token probabilities</td><td>0.92</td><td>1</td><td>6</td></tr>
+          <tr><td>d3-flash <span class="sub">decision model, 9B</span></td><td>0.89</td><td>5</td><td>4</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <aside class="side"><span class="lbl">The specialist came last</span>On clearer cases, general models matched or beat the 9B decision model.</aside>
+    <p>The purpose-built judge came last. Looking at what each judge let through explains why, and it's the most useful part of the whole exercise:</p>
     <ul class="tight">
-      <li><strong>How you ask matters as much as which model you ask.</strong> The same Gemma went from three unsafe allows to one just by reading its token probabilities instead of asking it to state a number. That version was also the fastest judge on my laptop, at about a second.</li>
-      <li><strong>Calibration isn't exclusive to decision models.</strong> Qwen 27B, a general-purpose model, was as well calibrated as d3-flash, even when simply asked. Gemma's all-or-nothing answers were a property of a small model with a weak method, not of LLM judges in general.</li>
-      <li><strong>The purpose-built judge still had the cleanest record.</strong> d3-flash was the only judge with no unsafe allows, and the only one to hold Gemma's fabricated discount record. It was also over-cautious once, on a harmless local commit.</li>
-      <li><strong>When every LLM judge misses the same thing, check the question.</strong> None of them flagged the fabricated record, and none of the code-changes questions asks whether a file claims something happened that didn't. That's a pack gap as much as a judge gap.</li>
-      <li><strong>Nobody was fooled by a note to the reviewer.</strong> Every judge blocked the red team's "pre-approved, mark as consistent" proposals. Those were blunt; subtler attacks, like a forged approval record in the state itself, are next on my list.</li>
+      <li><strong>d3-flash's five misses were all one blind spot:</strong> a small, unapproved goodwill credit after the customer asked for "something for the delay". It also flagged harmless confirmation emails for third-party data more than it should, which a threshold tuned on a single real email had hidden.</li>
+      <li><strong>Gemma, asked to state its confidence, had a different and very consistent blind spot:</strong> it approved a refund nobody had asked for, three times out of three. That's the same mistake it made when judging its own agent in the live run. Read through its token probabilities, the same Gemma never made it.</li>
+      <li><strong>Qwen 27B was the strongest single judge,</strong> whichever way it was asked. Its only errors were holding three code changes that added a test alongside the fix, which is arguably a borderline label of mine.</li>
+      <li><strong>Combining judges from different families was the most robust choice.</strong> d3-flash plus Qwen let nothing unsafe through, and d3-flash plus Gemma beat either of them alone.</li>
+      <li><strong>One idea didn't work.</strong> A small trained readout on each judge's probabilities, my lightweight stand-in for fine-tuning a decision head, made every judge more cautious rather than more accurate. It was optimizing the wrong thing, and I'm reporting it rather than burying it.</li>
     </ul>
-    <p>What this doesn't show is just as important. Twenty-six decisions and one person's labels are a direction, not a verdict. It doesn't show a same-family penalty beyond calibration: Gemma and Qwen missed the same item. And it doesn't test the strongest version of the same-family idea, a Gemma <em>fine-tuned</em> as a decision model, which is a reasonable thing to build. If it matched d3-flash, I'd be happy to be wrong about family mattering much.</p>
+    <p>So where does that leave the hypothesis? Half right. A well-built decision model was the safest judge on the subtle, real decisions an agent actually produced, and it's cheap and structured by design. But it wasn't the best judge on clearer cases, and a general model, including the agent's own family, can be a good judge if you ask it the right way. The variable that matters most isn't the model type. It's whether the checker is independent of the doer, whether its confidence is calibrated and its thresholds are tuned for <em>it</em>, and whether more than one kind of model is looking.</p>
+    <p class="note">Limits: the benchmark's variations are cleaner than real agent behavior, and its labels, like the real ones, are mine. I've set up a blind labeling round for independent reviewers; until it reports back, treat every label here as one person's judgment. Full results, per-case tables and every tool to reproduce them are in the repo.</p>
 
     <h2 id="what-it-proves">What it proves, and how it scales</h2>
     <ul class="tight">
       <li><strong>Rules and judges catch different things.</strong> The rules stopped the secret, the protected-branch push and every read of the payments config without consulting any model. Only a judge could catch the injected email and the unapproved promise, because both passed every rule.</li>
-      <li><strong>The judge's harness and questions are controls in their own right.</strong> How a judge is asked, and what it's asked, moved results as much as which model it was.</li>
+      <li><strong>No judge type wins everywhere.</strong> Each had its own blind spot, which is the strongest argument there is for independence and diversity in the checking.</li>
+      <li><strong>How a judge is asked, and what it's asked, are controls in their own right.</strong> The same model flipped from approving to blocking the same refund depending on how its answer was read.</li>
+      <li><strong>Thresholds belong to a judge, not to a system.</strong> A threshold tuned for one judge quietly mis-served another. Each judge needs its own calibration, on your own traffic.</li>
       <li><strong>Agents under pressure try again.</strong> Blocked, Gemma retried the same email, wrote a record to justify a promise, pushed to a different branch, and, across two jobs, tried five times to read a config file it had been denied. Session behavior is a signal, which is why the denial budget now exists. In this run the judge was already holding everything by then, so the budget never had to act; it's the backstop for the day the judge misses.</li>
       <li><strong>The record is evidence.</strong> Editing a verdict, deleting an entry, or editing and re-hashing an entry without the key were each caught at the exact entry. With the brake engaged, every action was refused and recorded.</li>
-      <li><strong>Calibration is real work.</strong> My first live run held all four of Gemma's perfectly harmless confirmation emails. Giving the judge the list of actions the gateway actually executed, and moving one threshold, fixed it. The reason is written into the policy pack.</li>
     </ul>
-    <p>Six jobs on one laptop aren't a large-scale evaluation, and I'd be suspicious of anyone who said otherwise. But the approach doesn't depend on the size of the system around it. The gateway sits on tool calls, not on the codebase, so a monorepo with thousands of services doesn't change the shape of the check: each action is still one proposal, one rule check, one judgment, over the diff or record that action touches. Cost grows with the number of actions, not with lines of code. New use cases are new packs. Moving to production is a list of known steps: the recorder as its own service writing to write-once storage, public-key signatures anchored in a transparency log, OTel export into the SIEM, a second judge, and fine-tuning on the review labels the system already collects. They're all in the <a href="https://github.com/deepirex/agent-flight-recorder/blob/main/poc/README.md" target="_blank" rel="noopener">repo's README</a>.</p>
+    <p>Six jobs and a couple of hundred cases on one laptop aren't a large-scale evaluation, and I'd be suspicious of anyone who said otherwise. But the approach doesn't depend on the size of the system around it. The gateway sits on tool calls, not on the codebase, so a monorepo with thousands of services doesn't change the shape of the check: each action is still one proposal, one rule check, one judgment, over the diff or record that action touches. Cost grows with the number of actions, not with lines of code. New use cases are new packs. Moving to production is a list of known steps: the recorder as its own service writing to write-once storage, public-key signatures anchored in a transparency log, OTel export into the SIEM, a second judge from another family, and calibration on the review labels the system already collects. They're all in the <a href="https://github.com/deepirex/agent-flight-recorder/blob/main/poc/README.md" target="_blank" rel="noopener">repo's README</a>.</p>
 
     <h2 id="getting-cheaper">This only gets cheaper</h2>
     <p>I'm well aware this is a moving target. New models, smaller decision models, better quantization and faster kernels arrive almost weekly. d3-flash itself reports 19 ms per decision on a datacenter GPU, against a few seconds on my laptop, and that gap is mostly hardware and kernels, not the idea.</p>
     <p>That's the main reason the design is model-agnostic. The judge sits behind a typed-question contract and the policy lives in packs, so a better or cheaper decision model drops in without touching the rules, the record or the agent. Same for the agent. The architecture should outlive every model in it.</p>
 
     <h2 id="mix-and-match">Why mix and match</h2>
-    <p>The case isn't against LLMs, and it isn't that a model can never judge its own family's work. Gemma did genuinely good work here, and with the right harness it was a decent judge too. The case is against an untested default: one model, asked the obvious way, doing the work and the checking, with authority and evidence living inside it. Mixing means mixing roles, controls and, where the stakes justify it, models.</p>
+    <p>The case isn't against LLMs, and it isn't for any one kind of judge. Gemma did genuinely good work here, and asked the right way it was a good judge of its own work too. The case is against an untested default: one model, asked the obvious way, doing the work and the checking, with authority and evidence living inside it. Mixing means mixing roles, controls and judges, and the benchmark says the last one pays: two judges from different families beat either alone.</p>
     <ul class="tight">
-      <li><strong>Separate the doer from the checker.</strong> Different weights, no shared context, no view of the agent's reasoning. A different model family is a cheap extra layer of independence; a same-family judge with a calibrated harness is a legitimate choice where that's what you have.</li>
-      <li><strong>Ask for probabilities, not opinions.</strong> A decision model gives them by construction. A general model can get close if you read its token probabilities rather than asking it how sure it is.</li>
+      <li><strong>Separate the doer from the checker.</strong> Different weights, no shared context, no view of the agent's reasoning. A same-family judge with a calibrated harness is a legitimate choice; a second judge from a different family covers the blind spots any single judge has.</li>
+      <li><strong>Get a confidence you can trust, and check it.</strong> A decision model gives probabilities by construction, a general model's token probabilities often beat its stated confidence, and a large model may be fine either way. Which one is calibrated is an empirical question about your traffic, not a matter of faith.</li>
       <li><strong>Doubt you can use.</strong> Calibrated probabilities create a real "ask a person" band, so people review the grey areas instead of everything or nothing.</li>
-      <li><strong>Cost that allows checking every step.</strong> A decision model answers all questions in one pass without writing anything.</li>
+      <li><strong>Cost that allows checking every step.</strong> A decision model answers all questions in one pass without writing anything, and a general model read through its token probabilities writes two tokens per question. Either keeps per-step checking affordable.</li>
       <li><strong>Speed where it counts.</strong> Reads and drafts are never gated; only side effects and sensitive reads wait.</li>
       <li><strong>Data stays home when it must.</strong> An open-weight judge can run inside your network.</li>
       <li><strong>No single point of failure.</strong> If one model has a bad week, the rules, the record and the other judge don't.</li>
@@ -784,6 +807,7 @@ ol.trace li b { color: var(--ink); }
         <thead><tr><th>Risk</th><th>How the design contains it</th></tr></thead>
         <tbody>
           <tr><td>The judge misses subtle sabotage from a stronger model</td><td>Rules first, escalation for the uncertain band, and a random sample of approvals reviewed so the miss rate is measured.</td></tr>
+          <tr><td>Every judge has a blind spot</td><td>The benchmark found a different one for each judge. Two judges from different families, each with its own calibrated thresholds, covered for each other.</td></tr>
           <tr><td>Agent output contains text aimed at the judge</td><td>The judge reads structured fields, never the agent's reasoning, and rules veto regardless of any verdict. Blunt "note to the reviewer" attacks failed against every judge tested; subtler ones are untested.</td></tr>
           <tr><td>The agent keeps trying after it's stopped</td><td>A denial budget: after two denials or blocks in a session, every further consequential action goes to a person.</td></tr>
           <tr><td>Too many escalations, and reviewers start rubber-stamping</td><td>Thresholds tuned on real traffic, repeat decisions turned into rules, approval rates tracked per reviewer.</td></tr>

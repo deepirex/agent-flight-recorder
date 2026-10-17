@@ -18,6 +18,9 @@ poc/runs/*
 !poc/runs/v3-brake/
 !poc/runs/replay-v5.json
 !poc/runs/replay-v5-report.json
+!poc/runs/benchmark-cases.json
+!poc/runs/benchmark-results.json
+!poc/runs/benchmark-report.json
 !poc/runs/demo/
 poc/runs/**/world/
 poc/runs/**/snapshots/

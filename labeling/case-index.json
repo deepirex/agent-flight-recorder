@@ -1,0 +1,302 @@
+[
+ {
+  "id": "R-s125",
+  "source": "v5-scripted#125",
+  "key": "scripted/make-ci-green/write_file/1",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0111",
+  "source": "benchmark",
+  "key": "B0111",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l234",
+  "source": "v5-live#234",
+  "key": "live/make-ci-green/git_commit/1",
+  "tool": "git_commit"
+ },
+ {
+  "id": "B0036",
+  "source": "benchmark",
+  "key": "B0036",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l163",
+  "source": "v5-live#163",
+  "key": "live/injected-ticket/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "B0179",
+  "source": "benchmark",
+  "key": "B0179",
+  "tool": "http_post"
+ },
+ {
+  "id": "R-l173",
+  "source": "v5-live#173",
+  "key": "live/injected-ticket/send_email/2",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l259",
+  "source": "v5-live#259",
+  "key": "live/make-ci-green/git_push/1",
+  "tool": "git_push"
+ },
+ {
+  "id": "B0029",
+  "source": "benchmark",
+  "key": "B0029",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "B0021",
+  "source": "benchmark",
+  "key": "B0021",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "B0167",
+  "source": "benchmark",
+  "key": "B0167",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0165",
+  "source": "benchmark",
+  "key": "B0165",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0049",
+  "source": "benchmark",
+  "key": "B0049",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l128",
+  "source": "v5-live#128",
+  "key": "live/judge-injection/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l013",
+  "source": "v5-live#13",
+  "key": "live/readme-typo/write_file/1",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0171",
+  "source": "benchmark",
+  "key": "B0171",
+  "tool": "http_post"
+ },
+ {
+  "id": "R-s038",
+  "source": "v5-scripted#38",
+  "key": "scripted/refund-overreach/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l190",
+  "source": "v5-live#190",
+  "key": "live/injected-ticket/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-s072",
+  "source": "v5-scripted#72",
+  "key": "scripted/judge-injection/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "B0143",
+  "source": "benchmark",
+  "key": "B0143",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0178",
+  "source": "benchmark",
+  "key": "B0178",
+  "tool": "http_post"
+ },
+ {
+  "id": "R-s082",
+  "source": "v5-scripted#82",
+  "key": "scripted/judge-injection/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "B0177",
+  "source": "benchmark",
+  "key": "B0177",
+  "tool": "http_post"
+ },
+ {
+  "id": "R-l106",
+  "source": "v5-live#106",
+  "key": "live/goodwill-credit/send_email/2",
+  "tool": "send_email"
+ },
+ {
+  "id": "B0124",
+  "source": "benchmark",
+  "key": "B0124",
+  "tool": "write_file"
+ },
+ {
+  "id": "R-s020",
+  "source": "v5-scripted#20",
+  "key": "scripted/readme-typo/git_commit/1",
+  "tool": "git_commit"
+ },
+ {
+  "id": "B0092",
+  "source": "benchmark",
+  "key": "B0092",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l023",
+  "source": "v5-live#23",
+  "key": "live/readme-typo/git_commit/1",
+  "tool": "git_commit"
+ },
+ {
+  "id": "B0151",
+  "source": "benchmark",
+  "key": "B0151",
+  "tool": "write_file"
+ },
+ {
+  "id": "R-s010",
+  "source": "v5-scripted#10",
+  "key": "scripted/readme-typo/write_file/1",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0075",
+  "source": "benchmark",
+  "key": "B0075",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l248",
+  "source": "v5-live#248",
+  "key": "live/make-ci-green/git_commit/2",
+  "tool": "git_commit"
+ },
+ {
+  "id": "B0173",
+  "source": "benchmark",
+  "key": "B0173",
+  "tool": "http_post"
+ },
+ {
+  "id": "B0048",
+  "source": "benchmark",
+  "key": "B0048",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "B0042",
+  "source": "benchmark",
+  "key": "B0042",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l081",
+  "source": "v5-live#81",
+  "key": "live/goodwill-credit/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l042",
+  "source": "v5-live#42",
+  "key": "live/refund-overreach/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l221",
+  "source": "v5-live#221",
+  "key": "live/make-ci-green/write_file/1",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0110",
+  "source": "benchmark",
+  "key": "B0110",
+  "tool": "send_email"
+ },
+ {
+  "id": "B0175",
+  "source": "benchmark",
+  "key": "B0175",
+  "tool": "http_post"
+ },
+ {
+  "id": "B0090",
+  "source": "benchmark",
+  "key": "B0090",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-s106",
+  "source": "v5-scripted#106",
+  "key": "scripted/injected-ticket/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l091",
+  "source": "v5-live#91",
+  "key": "live/goodwill-credit/write_file/1",
+  "tool": "write_file"
+ },
+ {
+  "id": "B0099",
+  "source": "benchmark",
+  "key": "B0099",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-l071",
+  "source": "v5-live#71",
+  "key": "live/goodwill-credit/issue_refund/1",
+  "tool": "issue_refund"
+ },
+ {
+  "id": "R-l052",
+  "source": "v5-live#52",
+  "key": "live/refund-overreach/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "B0132",
+  "source": "benchmark",
+  "key": "B0132",
+  "tool": "write_file"
+ },
+ {
+  "id": "R-s135",
+  "source": "v5-scripted#135",
+  "key": "scripted/make-ci-green/git_commit/1",
+  "tool": "git_commit"
+ },
+ {
+  "id": "R-l138",
+  "source": "v5-live#138",
+  "key": "live/judge-injection/send_email/1",
+  "tool": "send_email"
+ },
+ {
+  "id": "R-s056",
+  "source": "v5-scripted#56",
+  "key": "scripted/goodwill-credit/issue_refund/1",
+  "tool": "issue_refund"
+ }
+]
