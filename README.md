@@ -4,14 +4,14 @@
 
 *The model proposes. The harness decides. The recorder remembers.*
 
-Letting one model family write the code, check it and audit it means one set of blind spots doing three jobs. This is
-a working alternative: an LLM agent does the work, a small decision model from a different family checks every
-consequential action, deterministic rules set the limits, and a flight recorder no model can touch keeps the evidence.
-It runs entirely on one laptop, and it addresses the concerns Satya Nadella and Nikesh Arora have raised about
-separating intelligence from authority and keeping AI auditable.
+Whoever makes a payment can't approve it. Banks call it maker-checker; most AI agents skip it. This is a
+maker-checker harness for agents: the agent (the maker) only proposes, and the checker is everything it can't touch:
+deterministic rules, judges from different model families that can hold or block but never approve, and people for
+the uncertain cases. A flight recorder no model can touch keeps the evidence. It's one working answer to the question
+Satya Nadella and Nikesh Arora have raised: how to separate intelligence from authority and keep AI auditable.
 
-- **Article:** [`article.html`](article.html) (open it in a browser): the approach, what I built, the results, a
-  head-to-head of a decision model against an LLM judging its own family's work, and why mixing models works better.
+- **Article:** [`article.html`](article.html) (open it in a browser): the pattern, the harness, what happened, what
+  surprised me, and whether it holds up under attack.
 - **Proof of concept:** [`poc/`](poc/) — a local agent (Gemma 4) does real work through a gateway with deterministic
   rules, a local decision model as judge ([d3-flash](https://huggingface.co/vllm-sr/d3-flash)), a hold queue for
   humans, per-use-case policy packs, snapshots before every consequential action, incident bundles, and a
