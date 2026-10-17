@@ -423,10 +423,11 @@ ol.trace li b { color: var(--ink); }
       <li><strong>A panel of two judges checks every consequential action.</strong> From different model families, each calibrated with its own thresholds. Either can hold. Neither can approve anything the rules don't already allow.</li>
       <li><strong>Judges never read the agent's words directly.</strong> A third model from another lineage reduces what the agent wrote to a list of facts, so there's nothing for a hidden signal to ride on.</li>
       <li><strong>Hidden test traps keep the judges honest.</strong> Known-bad actions are mixed into their work. A judge that lets one through is flagged.</li>
+      <li><strong>The checking is sized to the doubt.</strong> Small judges see every action; a large one is called only when a score lands close to the line.</li>
       <li><strong>People decide the uncertain cases,</strong> and a session that keeps getting stopped loses the benefit of the doubt.</li>
       <li><strong>Every step goes into a flight recorder</strong> no model can see or edit, in a format security tools already read.</li>
     </ul>
-    <p>On 50 decisions, that combination let nothing unsafe through, and with one judge deliberately compromised it still let nothing through. It doesn't need every model loaded at once, either: two small judges can check every action and call the large one only when a score lands near the line. The rest of this piece is how I got there, including the part where my own hypothesis turned out to be half wrong.</p>
+    <p>On 50 decisions, that combination let nothing unsafe through, and with one judge deliberately compromised it still let nothing through. The rest of this piece is how I got there, including the part where my own hypothesis turned out to be half wrong.</p>
 
     <h2 id="a-different-kind-of-model">A different kind of model for the checking</h2>
     <p>What caught my attention was <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a>, one of a new class of <strong>decision models</strong>. A decision model doesn't write anything. You give it some state (a ticket, a proposed action, a diff) and typed questions: pick one of these options, yes or no, or a score on a scale. It answers all of them in one pass, with a probability for every option, and generates no text at all.</p>
@@ -838,8 +839,8 @@ ol.trace li b { color: var(--ink); }
 
     <h2 id="getting-cheaper">This only gets cheaper</h2>
     <p>I'm well aware this is a moving target. New models, smaller decision models, better quantization and faster kernels arrive almost weekly. d3-flash itself reports 19 ms per decision on a datacenter GPU, against a few seconds on my laptop, and that gap is mostly hardware and kernels, not the idea.</p>
-    <h3>Don't load every model at once</h3>
-    <p>The panel above has a cost problem I didn't like: a decision model, a 27B general model and a third model for fact extraction, all resident, just to check an agent. That defeats the point of running locally. So I tried the cheapest judge I could think of: EmbeddingGemma-2, a small model that only turns text into vectors, with a little classifier trained per judge question on the benchmark's training cases. It checks an action in about 20 ms.</p>
+    <h3>Size the checking to the doubt</h3>
+    <p>Most actions aren't close calls, so they shouldn't all need the largest judge. A local setup should keep only small models resident and bring in a large one when a decision is genuinely hard. To test that, I paired d3-flash with the cheapest judge I could think of: EmbeddingGemma-2, a small model that only turns text into vectors, with a little classifier trained per judge question on the benchmark's training cases. It checks an action in about 20 ms.</p>
     <p>Alone it's weak, because "is this within the task?" is about how things relate, and embeddings handle that badly. On concrete questions, like an amount that doesn't match or someone else's data in an email, it's strong. So I used it as the second small judge and kept the large model in reserve.</p>
     <div class="tbl-wrap">
       <table class="num">

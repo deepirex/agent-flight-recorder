@@ -5,6 +5,7 @@ __pycache__/
 # Drafts and the artifact source (article.html is the published, standalone copy)
 x-article.md
 linkedin-post.md
+linkedin-post-tldr.md
 agent-flight-recorder.html
 
 # Never publish the recorder's signing key
