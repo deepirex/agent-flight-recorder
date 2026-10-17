@@ -166,8 +166,10 @@ changes that added a test alongside the fix, a label that is arguably borderline
 (Platt scaling, fitted on the training templates) made every judge more cautious, not more accurate.
 
 Read with the real-decision results above: the decision model was safest on the 26 subtle, real decisions; general
-models matched or beat it on the clearer synthetic cases; combining two families was the most robust. The
-benchmark's variations are cleaner than real agent behavior, and its labels are mine.
+models matched or beat it on the clearer synthetic cases. The pair I tested was same-lineage — d3 is Qwen3.5-derived,
+and the second judge is Qwen 3.8 — and the only genuinely cross-family judge, Gemma, did worse. The lesson is
+decorrelated errors and calibration per judge, not vendor labels. The benchmark's variations are cleaner than real
+agent behavior, and its labels are mine.
 
 ## The full approach on the 50 decisions
 
