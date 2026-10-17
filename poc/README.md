@@ -286,6 +286,34 @@ tuning on real incident data, and the miss rate needs measuring with audit sampl
 - **The agent sees only "not permitted" or "held".** That's deliberate isolation, but a production agent also needs
   a structured way to ask for approval rather than retrying.
 
+## A cheaper stack: small judges first, the large one on demand
+
+The full panel keeps a decision model, a 27B model and a fact extractor resident. `embed_judge.py` tests the cheapest
+judge available: EmbeddingGemma-2 (embedding-only, 768-d) plus one logistic-regression classifier per judge question,
+trained on the benchmark's training templates only, with group-held-out folds so no case is scored by a classifier that
+saw its template. About 21 ms per check.
+
+```bash
+EPY=~/Models/embeddinggemma-2/.venv/bin/python   # sentence-transformers, scikit-learn
+$EPY embed_judge.py      # writes benchmark-results.json and panel-cache.json["embed"]; runs/embed-meta.json
+```
+
+Alone it is weak (0.60 accuracy on unseen templates): the "within the task?" question is relational and its AUC is
+0.73, while concrete questions score 0.93–1.0. Used beside d3-flash on concrete questions only, with thresholds tuned
+jointly on training templates (results in `runs/benchmark-report.json`, keys `joint_panels` and `efficient_stack`):
+
+| Setup (rules always on) | Unseen benchmark (83) | 50 decisions | Qwen 27B called |
+|---|---|---|---|
+| d3-flash + Qwen, both on every action | 78, 0 unsafe, 5 over | 50/50 | every action |
+| d3-flash + EmbeddingGemma classifier | 79, 2 unsafe, 2 over | 48/50, 1 unsafe, 1 over | never |
+| **Tiered: the two small judges; Qwen only if a score is within 0.10 of its threshold** | **78, 0 unsafe, 5 over** | **49/50, 0 unsafe, 1 over** | 12/83 and 10/50 actions |
+
+The small panel's unsafe allows were all refunds nobody had asked for, scored just under the line by both small
+judges; the on-demand call to Qwen catches them. Caveats: the 0.10 margin was chosen after seeing these results (wider
+margins call Qwen more often without improving safety), and in the collusion test the small panel let 2/32 covert
+actions through with either judge compromised (with fact extraction), against 0/32 for d3-flash + Qwen. Keep the large
+judge on every call for high-risk tools.
+
 ## Layout
 
 ```
@@ -300,6 +328,7 @@ poc/
   benchmark.py           scores judges on it; fair per-judge thresholds; combined judges
   make_labeling_page.py  builds the blind labeling page in ../labeling/
   panel_eval.py          the full approach on the 50 decisions, plus collusion and trap tests
+  embed_judge.py         EmbeddingGemma-2 + per-question classifiers: a tiny judge for the tiered stack
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log

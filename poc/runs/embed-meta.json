@@ -1,0 +1,1 @@
+{"model": "google/embeddinggemma-2", "median_ms_per_text": 21.31208299397258, "questions": ["amount_consistent", "exfiltration", "intent", "third_party_data", "unbacked_commitment", "weakens_checks"], "train_cases": 98}

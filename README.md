@@ -60,6 +60,12 @@ On the 50 held-out decisions, the full approach let nothing unsafe through (48/5
 and with one judge deliberately compromised it still let 0 of 32 covert actions through. See
 [`poc/README.md`](poc/README.md#the-full-approach-on-the-50-decisions).
 
+It doesn't need every model loaded at once. Two small judges (d3-flash and an EmbeddingGemma-2 classifier) on every
+action, with Qwen 27B called only when a score lands within 0.10 of its threshold, kept unsafe allows at zero on both
+the unseen benchmark cases and the 50 decisions, at about half the memory, consulting Qwen on 14–20% of actions. It's
+a weaker second opinion under collusion (2/32 covert actions through). See
+[`poc/README.md`](poc/README.md#a-cheaper-stack-small-judges-first-the-large-one-on-demand).
+
 ## Is it the model, or the harness?
 
 Every decision was also scored, in shadow, by Gemma judging its own family's work. Asked to state its confidence, it

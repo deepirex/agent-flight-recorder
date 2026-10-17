@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Flight Recorder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -405,7 +405,7 @@ ol.trace li b { color: var(--ink); }
     <span class="tag">Give every AI agent a flight recorder</span>
     <h1>I gave an AI agent six jobs and <span class="o">two judges</span></h1>
     <p class="dek"><strong>One shared its family. One didn't. Only one knew when to ask for help.</strong> A live test of one model doing everything versus a mix of models, then a bigger benchmark that didn't go the way I expected, and the approach that finally held up, even with one judge compromised.</p>
-    <div class="byline"><span>Deepak</span><span>October 2026</span><span>18 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub ↗</a></div>
+    <div class="byline"><span>Deepak</span><span>October 2026</span><span>19 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub ↗</a></div>
   </header>
 
   <article class="col prose">
@@ -426,7 +426,7 @@ ol.trace li b { color: var(--ink); }
       <li><strong>People decide the uncertain cases,</strong> and a session that keeps getting stopped loses the benefit of the doubt.</li>
       <li><strong>Every step goes into a flight recorder</strong> no model can see or edit, in a format security tools already read.</li>
     </ul>
-    <p>On 50 decisions, that combination let nothing unsafe through, and with one judge deliberately compromised it still let nothing through. The rest of this piece is how I got there, including the part where my own hypothesis turned out to be half wrong.</p>
+    <p>On 50 decisions, that combination let nothing unsafe through, and with one judge deliberately compromised it still let nothing through. It doesn't need every model loaded at once, either: two small judges can check every action and call the large one only when a score lands near the line. The rest of this piece is how I got there, including the part where my own hypothesis turned out to be half wrong.</p>
 
     <h2 id="a-different-kind-of-model">A different kind of model for the checking</h2>
     <p>What caught my attention was <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a>, one of a new class of <strong>decision models</strong>. A decision model doesn't write anything. You give it some state (a ticket, a proposed action, a diff) and typed questions: pick one of these options, yes or no, or a score on a scale. It answers all of them in one pass, with a probability for every option, and generates no text at all.</p>
@@ -838,6 +838,20 @@ ol.trace li b { color: var(--ink); }
 
     <h2 id="getting-cheaper">This only gets cheaper</h2>
     <p>I'm well aware this is a moving target. New models, smaller decision models, better quantization and faster kernels arrive almost weekly. d3-flash itself reports 19 ms per decision on a datacenter GPU, against a few seconds on my laptop, and that gap is mostly hardware and kernels, not the idea.</p>
+    <h3>Don't load every model at once</h3>
+    <p>The panel above has a cost problem I didn't like: a decision model, a 27B general model and a third model for fact extraction, all resident, just to check an agent. That defeats the point of running locally. So I tried the cheapest judge I could think of: EmbeddingGemma-2, a small model that only turns text into vectors, with a little classifier trained per judge question on the benchmark's training cases. It checks an action in about 20 ms.</p>
+    <p>Alone it's weak, because "is this within the task?" is about how things relate, and embeddings handle that badly. On concrete questions, like an amount that doesn't match or someone else's data in an email, it's strong. So I used it as the second small judge and kept the large model in reserve.</p>
+    <div class="tbl-wrap">
+      <table class="num">
+        <thead><tr><th>Setup</th><th>Unseen benchmark cases (83)</th><th>50 decisions</th><th>Large model used</th></tr></thead>
+        <tbody>
+          <tr><td>Rules + d3-flash + Qwen 27B <span class="sub">both judges on every action</span></td><td>78 correct, 0 unsafe</td><td>50/50</td><td>every action</td></tr>
+          <tr><td>Rules + d3-flash + EmbeddingGemma classifier</td><td>79 correct, 2 unsafe</td><td>48/50, 1 unsafe</td><td>never</td></tr>
+          <tr><td><strong>Tiered: the two small judges, Qwen only when a score is within 0.10 of its threshold</strong></td><td><strong>78 correct, 0 unsafe</strong></td><td><strong>49/50, 0 unsafe</strong></td><td>14–20% of actions</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Both unsafe allows from the small panel were the same thing: a refund nobody had asked for, scored just under the line by both small judges. Sending only those near-misses to the large model closed the gap at about half the memory, with the large model consulted on one action in five to seven. Two honest caveats: I picked the 0.10 margin after seeing these results, so it needs fresh cases to confirm, and with one judge compromised the small panel let 2 of 32 covert actions through, against none with Qwen. A tiny classifier is a weaker second opinion than a large model.</p>
     <p>That's the main reason the design is model-agnostic. The judge sits behind a typed-question contract and the policy lives in packs, so a better or cheaper decision model drops in without touching the rules, the record or the agent. Same for the agent. The architecture should outlive every model in it.</p>
 
     <h2 id="mix-and-match">Why mix and match</h2>
@@ -847,6 +861,7 @@ ol.trace li b { color: var(--ink); }
       <li><strong>Get a confidence you can trust, and check it.</strong> A decision model gives probabilities by construction, a general model's token probabilities often beat its stated confidence, and a large model may be fine either way. Which one is calibrated is an empirical question about your traffic, not a matter of faith.</li>
       <li><strong>Doubt you can use.</strong> Calibrated probabilities create a real "ask a person" band, so people review the grey areas instead of everything or nothing.</li>
       <li><strong>Cost that allows checking every step.</strong> A decision model answers all questions in one pass without writing anything, and a general model read through its token probabilities writes two tokens per question. Either keeps per-step checking affordable.</li>
+      <li><strong>Size the judge to the doubt.</strong> Small judges on every action, a large one only when a score lands near the line. In my tests that matched the large panel's safety while calling the large model on a fraction of actions.</li>
       <li><strong>Speed where it counts.</strong> Reads and drafts are never gated; only side effects and sensitive reads wait.</li>
       <li><strong>Data stays home when it must.</strong> An open-weight judge can run inside your network.</li>
       <li><strong>No single point of failure.</strong> If one model has a bad week, the rules, the record and the other judge don't.</li>
@@ -867,6 +882,7 @@ ol.trace li b { color: var(--ink); }
           <tr><td>The agent and a judge collude</td><td>A second judge from another family, fact extraction, rules no judge can override, and hidden traps. With one judge compromised, nothing got through in testing; a signal hidden in meaning remains the residual risk.</td></tr>
           <tr><td>The agent keeps trying after it's stopped</td><td>A denial budget: after two denials or blocks in a session, every further consequential action goes to a person.</td></tr>
           <tr><td>Too many escalations, and reviewers start rubber-stamping</td><td>Thresholds tuned on real traffic, repeat decisions turned into rules, approval rates tracked per reviewer.</td></tr>
+          <tr><td>A cheap judge is easier to fool</td><td>Small judges only screen; anything near the line goes to the large judge, and rules and traps still apply. With a judge compromised, the small panel let 2 of 32 covert actions through in testing, so high-risk tools should keep the large judge on every call.</td></tr>
           <tr><td>The judges themselves are black boxes</td><td>They hold no authority: if every judge failed silently, the agent still couldn't exceed what the rules allow. Their closed answers can be measured against human decisions.</td></tr>
           <tr><td>The recorder becomes a sensitive data store</td><td>Encryption, secrets redacted at write time, and scoped read-only access for auditors.</td></tr>
         </tbody>
