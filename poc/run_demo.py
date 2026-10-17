@@ -22,7 +22,7 @@ sys.path.insert(0, str(HERE))
 
 from harness.agent import run_live, run_scripted  # noqa: E402
 from harness.gateway import Gateway  # noqa: E402
-from harness.judges import LLMJudge, configured_judges  # noqa: E402
+from harness.judges import LLMJudge, LogprobLLMJudge, configured_judges  # noqa: E402
 from harness.narrate import banner, narrate  # noqa: E402
 from harness.policy import Policy  # noqa: E402
 from harness.recorder import Recorder, verify  # noqa: E402
@@ -42,7 +42,7 @@ def main() -> None:
     ap.add_argument("--out", default=None, help="run directory (default runs/<timestamp>-<agent>)")
     ap.add_argument("--narrate", action="store_true", help="print every step live, for demos")
     ap.add_argument("--shadow-judge", default=None, metavar="OLLAMA_MODEL",
-                    help="also score every decision with this LLM as judge; recorded, never used for routing")
+                    help="comma-separated shadow judges, e.g. gemma4:12b-it-qat or logprob:gemma4:12b-it-qat; recorded, never routed")
     args = ap.parse_args()
 
     run_root = Path(args.out).resolve() if args.out else HERE / "runs" / f"{time.strftime('%Y%m%d-%H%M%S')}-{args.agent}"
@@ -57,7 +57,10 @@ def main() -> None:
     print(f"  ready in {time.perf_counter() - t:.1f}s")
 
     agent_id = args.model if args.agent == "live" else "red-team-script"
-    shadow = [LLMJudge(args.shadow_judge)] if args.shadow_judge else []
+    shadow = []
+    for spec in (args.shadow_judge.split(",") if args.shadow_judge else []):
+        kind, _, model = spec.partition(":") if spec.startswith(("logprob:", "verbal:")) else ("verbal", "", spec)
+        shadow.append(LogprobLLMJudge(model) if kind == "logprob" else LLMJudge(model))
     versions = {"policy": policy.version, "agent": agent_id, "recorder_key": rec.key_id,
                 **{f"judge.{i}": j.version for i, j in enumerate(judges)},
                 **{f"shadow.{i}": j.version for i, j in enumerate(shadow)}}

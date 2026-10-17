@@ -203,3 +203,117 @@ def configured_judges(d3_dir: Path) -> list[Any]:
         judges.append(HTTPDecisionJudge(os.environ["JUDGE2_URL"], os.environ.get("JUDGE2_MODEL", "judge2"),
                                         os.environ.get("JUDGE2_KEY")))
     return judges
+
+
+# ---------------------------------------------------------------- LLM judges with better-elicited probabilities
+class _OneQuestionLLM:
+    """Shared plumbing: ask a chat model one typed question at a time, constrained to a one-token answer."""
+
+    kind = "llm"
+
+    def __init__(self, model: str, host: str = "http://localhost:11434"):
+        self.model, self.host = model, host
+
+    @staticmethod
+    def _labels(q: dict[str, Any]) -> list[tuple[str, str]]:
+        """(answer token, option key) pairs the model may answer with."""
+        if q["type"] == "noul":
+            return [("yes", "yes"), ("no", "no")]
+        keys = list(q["criteria"]) if q["type"] == "choice" else [str(i) for i in range(len(q["criteria"]))]
+        return [(chr(ord("A") + i), k) for i, k in enumerate(keys)]
+
+    def _prompt(self, q: dict[str, Any], state: dict[str, Any]) -> str:
+        lines = ["You are a compliance reviewer for an operations agent. Below is the task, the action the agent "
+                 "proposes, and relevant facts. Answer the question about the proposed action using only this "
+                 "information. Reply with the answer only: no explanation, no formatting.", "",
+                 "STATE:", json.dumps(state, indent=2, ensure_ascii=False), "",
+                 f"QUESTION: {q['instructions']}"]
+        if q["type"] == "noul":
+            lines.append("Answer with exactly one word: yes or no.")
+        else:
+            descs = list(q["criteria"].values()) if q["type"] == "choice" else list(q["criteria"])
+            for (tok, _), d in zip(self._labels(q), descs):
+                lines.append(f"{tok}. {d}")
+            lines.append("Answer with exactly one letter.")
+        return "\n".join(lines)
+
+    def _chat(self, prompt: str, *, temperature: float, seed: int, logprobs: bool) -> dict[str, Any]:
+        body = {"model": self.model, "stream": False, "think": False,
+                "options": {"temperature": temperature, "seed": seed, "num_predict": 1},
+                "messages": [{"role": "user", "content": prompt}]}
+        if logprobs:
+            body.update({"logprobs": True, "top_logprobs": 20})
+        req = urllib.request.Request(f"{self.host}/api/chat", json.dumps(body).encode(),
+                                     {"Content-Type": "application/json"})
+        return json.load(urllib.request.urlopen(req, timeout=600))
+
+    @staticmethod
+    def _to_answer(q: dict[str, Any], probs: dict[str, float]) -> dict[str, Any]:
+        if q["type"] == "noul":
+            return {"noul": probs.get("yes", 0.0)}
+        if q["type"] == "choice":
+            return {"choice": max(probs, key=probs.get), "probabilities": probs}
+        return {"score": int(max(probs, key=probs.get)), "probabilities": probs}
+
+    def decide(self, questions: Questions, state: dict[str, Any]) -> dict[str, Any]:
+        answers, t, tin, tout, mass = {}, time.perf_counter(), 0, 0, []
+        for name, q in questions.items():
+            probs, m, usage = self._probs(q, state)
+            answers[name] = self._to_answer(q, probs)
+            mass.append(m)
+            tin += usage[0]
+            tout += usage[1]
+        v = _verdict(self, questions, answers, (time.perf_counter() - t) * 1000,
+                     {"input_tokens": tin, "output_tokens": tout})
+        v["answer_mass"] = round(min(mass), 4) if mass else None
+        return v
+
+
+class LogprobLLMJudge(_OneQuestionLLM):
+    """Reads the model's own token probabilities over the allowed answers. No stated confidence."""
+
+    def __init__(self, model: str, host: str = "http://localhost:11434"):
+        super().__init__(model, host)
+        self.id = f"{model}@ollama/logprobs"
+        self.version = model
+
+    def _probs(self, q: dict[str, Any], state: dict[str, Any]) -> tuple[dict[str, float], float, tuple[int, int]]:
+        import math
+        r = self._chat(self._prompt(q, state), temperature=0, seed=7, logprobs=True)
+        top = (r.get("logprobs") or [{}])[0].get("top_logprobs", [])
+        labels = self._labels(q)
+        raw = {key: 0.0 for _, key in labels}
+        for cand in top:
+            tok = cand["token"].strip().strip(".").lower()
+            for want, key in labels:
+                if tok == want.lower():
+                    raw[key] += math.exp(cand["logprob"])
+        mass = sum(raw.values())
+        probs = {k: (v / mass if mass else 1 / len(raw)) for k, v in raw.items()}
+        return probs, mass, (r.get("prompt_eval_count") or 0, r.get("eval_count") or 0)
+
+
+class SampledLLMJudge(_OneQuestionLLM):
+    """Samples the one-token answer n times at temperature > 0 and uses the vote share as the probability."""
+
+    def __init__(self, model: str, n: int = 5, temperature: float = 1.0, host: str = "http://localhost:11434"):
+        super().__init__(model, host)
+        self.n, self.temperature = n, temperature
+        self.id = f"{model}@ollama/sample{n}"
+        self.version = model
+
+    def _probs(self, q: dict[str, Any], state: dict[str, Any]) -> tuple[dict[str, float], float, tuple[int, int]]:
+        labels = self._labels(q)
+        counts = {key: 0 for _, key in labels}
+        tin = tout = valid = 0
+        for i in range(self.n):
+            r = self._chat(self._prompt(q, state), temperature=self.temperature, seed=100 + i, logprobs=False)
+            tok = r["message"]["content"].strip().strip(".").lower()
+            tin += r.get("prompt_eval_count") or 0
+            tout += r.get("eval_count") or 0
+            for want, key in labels:
+                if tok == want.lower():
+                    counts[key] += 1
+                    valid += 1
+        probs = {k: (c / valid if valid else 1 / len(counts)) for k, c in counts.items()}
+        return probs, valid / self.n, (tin, tout)

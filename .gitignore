@@ -10,13 +10,14 @@ agent-flight-recorder.html
 # Never publish the recorder's signing key
 poc/.keys/
 
-# Runs: publish only the v3 evidence runs and the demo run, without the sandbox copies
+# Runs: publish the v5 evidence runs, the replay results, the brake run and the demo run, without the sandbox copies
 # (each contains nested git repositories). Records, summaries, incidents and labels are kept.
 poc/runs/*
-!poc/runs/v3-scripted/
-!poc/runs/v3-live/
+!poc/runs/v5-scripted/
+!poc/runs/v5-live/
 !poc/runs/v3-brake/
-!poc/runs/bench-v3.json
+!poc/runs/replay-v5.json
+!poc/runs/replay-v5-report.json
 !poc/runs/demo/
 poc/runs/**/world/
 poc/runs/**/snapshots/

@@ -44,6 +44,7 @@ class Gateway:
         self.run_dir, self.session, self.task = run_dir, session, task
         self.sb, self.policy, self.judges, self.rec = sandbox, policy, judges, recorder
         self.shadow_judges = shadow_judges or []  # scored on the same state, recorded, never used for routing
+        self.denials = 0  # rule denials and judge blocks this session; feeds the denial budget
         self.versions = versions
         self.t2_mode = t2_mode
         self.rng = random.Random(rng_seed)
@@ -166,6 +167,16 @@ class Gateway:
         self.log("proposal", {"tool": tool, "args": args}, **tattrs)
 
         if effect == "read":
+            if tool in self.policy.gated_reads:
+                pack = self.policy.pack_for(tool)["label"]
+                t0 = self.policy.check(tool, args, {})
+                e = self.log("t0", t0, **tattrs, **{"acme.policy.pack": pack})
+                if t0["decision"] == "deny":
+                    self.denials += 1
+                    inc = self._incident(e, tool, args, f"denied by rule: {', '.join(t0['failed'])}", None)
+                    self.outcomes.append({"tool": tool, "args": args, "outcome": "denied", "by": "T0",
+                                          "rules": t0["failed"], "incident": inc, "seq": e["seq"], "pack": pack})
+                    return AGENT_MESSAGES["deny"]
             result = self.sb.execute(tool, args)
             self.log("tool_result", {"tool": tool, "result": result[:1500], "truncated": len(result) > 1500},
                      **tattrs)
@@ -182,6 +193,7 @@ class Gateway:
         tattrs["acme.policy.pack"] = pack
         e = self.log("t0", t0, **tattrs)
         if t0["decision"] == "deny":
+            self.denials += 1
             inc = self._incident(e, tool, args, f"denied by rule: {', '.join(t0['failed'])}", None)
             self.outcomes.append({"tool": tool, "args": args, "outcome": "denied", "by": "T0",
                                   "rules": t0["failed"], "incident": inc, "seq": e["seq"], "pack": pack})
@@ -194,6 +206,8 @@ class Gateway:
         # ---- T1
         state = self._judge_state(tool, args)
         questions = self.policy.questions_for(tool)
+        # what every judge sees, recorded verbatim: lets anyone audit or replay the decision with any judge
+        self.log("judge_input", {"state": state, "questions": questions}, **tattrs)
         verdicts = []
         for j in self.judges:
             v = j.decide(questions, state)
@@ -201,6 +215,9 @@ class Gateway:
             self.log("t1", {**v, "questions": list(questions)}, **tattrs,
                      **{"gen_ai.request.model": v["version"], "gen_ai.operation.name": "decide"})
         decision, why = self._route(effect, verdicts, tool)
+        budget = self.policy.routing_for(tool).get("denial_budget")
+        if decision == "allow" and budget is not None and self.denials >= budget:
+            decision, why = "escalate", f"session denial budget spent ({self.denials} denials or blocks so far)"
         shadow = []
         for j in self.shadow_judges:  # same state, same questions; recorded for comparison only
             v = j.decide(questions, state)
@@ -228,6 +245,7 @@ class Gateway:
                                       "seq": e["seq"], "shadow": shadow, "pack": pack})
                 return AGENT_MESSAGES["hold" if t2 == "hold" else "block"]
         elif decision == "block":
+            self.denials += 1
             inc = self._incident(e, tool, args, f"blocked by T1 ({why})", snap)
             self.outcomes.append({"tool": tool, "args": args, "outcome": "blocked", "by": "T1", "why": why,
                                   "verdicts": _vsum(verdicts), "incident": inc, "seq": e["seq"],

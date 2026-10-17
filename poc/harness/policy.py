@@ -41,6 +41,7 @@ class Policy:
                     raise ValueError(f"tool '{tool}' is covered by more than one pack")
                 self.tool_pack[tool] = pack["name"]
         self.version = "packs:" + ",".join(sorted(p["label"] for p in self.packs.values()))
+        self.gated_reads = {"read_file"} if self.cfg.get("reads", {}).get("sensitive_paths") else set()
         self.secret_res = [re.compile(p) for p in self.cfg["secrets"]["patterns"]]
 
     def pack_for(self, tool: str) -> dict[str, Any]:
@@ -73,7 +74,12 @@ class Policy:
             checks.append({"rule": rule_id, "ok": ok, "detail": detail})
 
         c = self.cfg
-        if tool == "git_push":
+        if tool == "read_file":
+            path = str(args.get("path", ""))
+            hit = [p for p in c.get("reads", {}).get("sensitive_paths", []) if p in path]
+            rule("reads.sensitive_path", not hit, f"{path} matches {hit}" if hit else path)
+
+        elif tool == "git_push":
             branch = str(args.get("branch", ""))
             rule("git.no_force_push", not args.get("force"), "force-push is never allowed")
             rule("git.protected_branch", branch not in c["protected_branches"],

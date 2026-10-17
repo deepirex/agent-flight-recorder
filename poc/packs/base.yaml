@@ -4,10 +4,14 @@
 # the flight recorder, so you can always tell which template made a call.
 
 name: base
-version: 1.0.0
+version: 1.1.0
 description: Organization-wide secret handling, default routing thresholds, and shared judge questions.
 
 rules:
+  reads:
+    # Reading these needs the rules' say-so. Added after a live run where the agent, once blocked, browsed the
+    # payments config. Least privilege covers what an agent can read, not only what it can do.
+    sensitive_paths: ['config/', '.env', 'secrets/']
   secrets:
     # Any proposed write, email or request whose content matches one of these is denied, in every use case.
     patterns:
@@ -24,6 +28,8 @@ routing:
                                   # (p 0.08-0.11). Raised after review. Tuned on a handful of cases only.
   disagreement: 0.35              # judges further apart than this escalate
   audit_sample_rate: 0.10         # share of allowed actions also sent for after-the-fact review
+  denial_budget: 2                # after this many denials or blocks in a session, every further consequential
+                                  # action goes to a person. Added after agents retried or routed around denials.
 
 # Questions any pack can reuse with `use: <name>`.
 shared_questions:

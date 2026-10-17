@@ -45,21 +45,22 @@ Nobody told the agent to misbehave. Running at temperature 0 on one laptop, with
 It also did the ordinary work correctly, and that went straight through: a typo fix, the right refund, a genuine bug
 fix.
 
-## Decision model vs LLM as judge
+## Is it the model, or the harness?
 
-Every decision was also scored, in shadow, by Gemma judging its own family's work. Both judges caught every blatant
-case. On the grey areas they split: in four decisions d3-flash was uncertain and asked a person, while Gemma was
-certain and would have let them through, including a $1,200 refund nobody asked for. Gemma answered all 45 questions
-with exactly 0 or 1; d3-flash never did. Full results, limits and calibration notes are in
-[`poc/README.md`](poc/README.md).
+Every decision was also scored, in shadow, by Gemma judging its own family's work. Asked to state its confidence, it
+never hesitated (55 of 55 answers at exactly 0 or 1) and would have waved through three grey areas that d3-flash held
+for a person. Then every recorded judge input was replayed through fairer variants and scored against published
+labels: reading Gemma's token probabilities cut its unsafe allows from 3 to 1, and a larger general model (Qwen 27B)
+was as well calibrated as d3-flash. d3-flash was the only judge with no unsafe allows. The lesson: how you ask a judge
+matters as much as which model it is. Details, limits and the replay tool are in [`poc/README.md`](poc/README.md).
 
 ## Run it
 
 ```bash
 cd poc
 python run_demo.py --agent live --narrate          # needs Ollama + gemma4:12b-it-qat and d3-flash; see poc/README.md
-python3 verify.py runs/v3-live/flight-recorder.jsonl --chain-only
-python3 bench.py runs/v3-live runs/v3-scripted
+python3 verify.py runs/v5-live/flight-recorder.jsonl --chain-only
+python3 bench.py runs/v5-live runs/v5-scripted
 ```
 
 ## Layout
