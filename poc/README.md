@@ -300,11 +300,13 @@ $EPY embed_judge.py      # writes benchmark-results.json and panel-cache.json["e
 
 Alone it is weak (0.60 accuracy on unseen templates): the "within the task?" question is relational and its AUC is
 0.73, while concrete questions score 0.93–1.0. Used beside d3-flash on concrete questions only, with thresholds tuned
-jointly on training templates (results in `runs/benchmark-report.json`, keys `joint_panels` and `efficient_stack`):
+jointly on training templates. `benchmark.py --report` tunes the pair thresholds (`runs/benchmark-report.json`,
+key `joint_panels`); `panel_eval.py --phase report` scores every setup below on the 50 decisions and the 83 unseen
+benchmark cases (`runs/panel-report.json`, key `pair_tuned`, with each setup's mistakes listed by case id):
 
 | Setup (rules always on) | Unseen benchmark (83) | 50 decisions | Qwen 27B called |
 |---|---|---|---|
-| d3-flash + Qwen, both on every action | 78, 0 unsafe, 5 over | 50/50 | every action |
+| d3-flash + Qwen, both on every action, tuned as a pair | 78, 0 unsafe, 5 over | 50/50, 0 unsafe, 0 over | every action |
 | d3-flash + EmbeddingGemma classifier | 79, 2 unsafe, 2 over | 48/50, 1 unsafe, 1 over | never |
 | **Tiered: the two small judges; Qwen only if a score is within 0.10 of its threshold** | **78, 0 unsafe, 5 over** | **49/50, 0 unsafe, 1 over** | 12/83 and 10/50 actions |
 
