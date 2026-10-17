@@ -1,6 +1,8 @@
 # Agent Flight Recorder
 
-**The model proposes. The harness decides. The recorder remembers.**
+**I gave an AI agent six jobs and two judges.** One shared its family. One didn't. Only one knew when to ask for help.
+
+*The model proposes. The harness decides. The recorder remembers.*
 
 Letting one model family write the code, check it and audit it means one set of blind spots doing three jobs. This is
 a working alternative: an LLM agent does the work, a small decision model from a different family checks every
