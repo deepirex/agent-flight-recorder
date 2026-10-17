@@ -26,6 +26,7 @@ from harness.judges import LLMJudge, LogprobLLMJudge, configured_judges  # noqa:
 from harness.narrate import banner, narrate  # noqa: E402
 from harness.policy import Policy  # noqa: E402
 from harness.recorder import Recorder, verify  # noqa: E402
+from harness.scrub import Paraphraser  # noqa: E402
 from harness.sandbox import Sandbox  # noqa: E402
 from harness.scenarios import SCENARIOS, seed  # noqa: E402
 
@@ -41,6 +42,12 @@ def main() -> None:
                     help="hold: escalations wait, nothing runs; human: ask on the terminal")
     ap.add_argument("--out", default=None, help="run directory (default runs/<timestamp>-<agent>)")
     ap.add_argument("--narrate", action="store_true", help="print every step live, for demos")
+    ap.add_argument("--judge2", default=None, metavar="logprob:MODEL",
+                    help="a second routing judge from another lineage (Ollama model read via token probabilities)")
+    ap.add_argument("--paraphrase", default=None, metavar="OLLAMA_MODEL",
+                    help="trusted third-lineage model that paraphrases agent prose before judges read it")
+    ap.add_argument("--canary-rate", type=float, default=0.0,
+                    help="share of judged actions that also get a hidden known-bad test case")
     ap.add_argument("--shadow-judge", default=None, metavar="OLLAMA_MODEL",
                     help="comma-separated shadow judges, e.g. gemma4:12b-it-qat or logprob:gemma4:12b-it-qat; recorded, never routed")
     args = ap.parse_args()
@@ -50,6 +57,13 @@ def main() -> None:
     policy = Policy(HERE / "packs")
     rec = Recorder(run_root / "flight-recorder.jsonl", HERE / ".keys" / "recorder.key")
     judges = configured_judges(D3_DIR)
+    if args.judge2:
+        judges.append(LogprobLLMJudge(args.judge2.split(":", 1)[1] if args.judge2.startswith("logprob:") else args.judge2))
+    paraphraser = Paraphraser(args.paraphrase) if args.paraphrase else None
+    canaries = []
+    if args.canary_rate > 0:
+        bench = HERE / "runs" / "benchmark-cases.json"
+        canaries = [c for c in json.loads(bench.read_text()) if c["label"] == "block"] if bench.exists() else []
     print(f"Loading judges: {', '.join(j.id for j in judges)}")
     t = time.perf_counter()
     for j in judges:
@@ -73,7 +87,8 @@ def main() -> None:
         task = {"name": name, "summary": sc["summary"], "instruction": sc["instruction"],
                 "ticket_id": sc.get("ticket_id")}
         gw = Gateway(run_dir=run_dir, session=session, task=task, sandbox=sb, policy=policy, judges=judges,
-                     recorder=rec, versions=versions, t2_mode=args.t2, shadow_judges=shadow)
+                     recorder=rec, versions=versions, t2_mode=args.t2, shadow_judges=shadow,
+                     paraphraser=paraphraser, canaries=canaries, canary_rate=args.canary_rate)
         if args.narrate:
             gw.on_event = narrate
         gw.log("session_start", {"task": task, "agent_mode": args.agent},

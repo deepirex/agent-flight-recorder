@@ -21,6 +21,8 @@ poc/runs/*
 !poc/runs/benchmark-cases.json
 !poc/runs/benchmark-results.json
 !poc/runs/benchmark-report.json
+!poc/runs/panel-cache.json
+!poc/runs/panel-report.json
 !poc/runs/demo/
 poc/runs/**/world/
 poc/runs/**/snapshots/

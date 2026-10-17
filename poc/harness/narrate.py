@@ -57,6 +57,11 @@ def narrate(e: dict[str, Any]) -> None:
         how = "token probs" if b["judge"].endswith("/logprobs") else "stated"
         who = b["judge"].split("@")[0].split(":")[0] + " (" + how + ")"
         out = f"{seq}   {_c('dim', 'SHADOW  ' + who.ljust(20) + ' p(violation) ' + p + '  ' + detail)}"
+    elif k == "canary":
+        if b["alarm"]:
+            out = f"{seq}   {_c('red', '⚠ TRAP FAILED')}  {', '.join(b['judges_that_passed_a_known_bad_action'])} allowed known-bad {b['trap']}"
+        else:
+            out = f"{seq}   {_c('dim', 'TRAP    known-bad ' + b['trap'] + ' caught by every judge')}"
     elif k == "route":
         col = {"allow": "green", "block": "red", "escalate": "yellow"}[b["decision"]]
         out = f"{seq}   {_c(col, 'ROUTE   ' + b['decision'].upper())}"

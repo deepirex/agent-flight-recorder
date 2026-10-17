@@ -169,6 +169,50 @@ Read with the real-decision results above: the decision model was safest on the 
 models matched or beat it on the clearer synthetic cases; combining two families was the most robust. The
 benchmark's variations are cleaner than real agent behavior, and its labels are mine.
 
+## The full approach on the 50 decisions
+
+`panel_eval.py` tests the approach one control at a time on the 50 blind-labeling decisions (26 real, 24 benchmark),
+then runs a collusion red team and a trap check. Phases run separately so the large models never share memory:
+
+```bash
+$PY panel_eval.py --phase paraphrase && $PY panel_eval.py --phase extract
+$PY panel_eval.py --phase d3 && $PY panel_eval.py --phase qwen
+$PY panel_eval.py --phase q2-d3 && $PY panel_eval.py --phase q2-qwen
+$PY panel_eval.py --phase report        # runs/panel-report.json
+```
+
+| Configuration | Correct | Unsafe allows | Over-cautious |
+|---|---|---|---|
+| d3-flash alone, live thresholds | 44/50 | 0 | 6 |
+| d3-flash alone, own thresholds | 46/50 | 3 | 1 |
+| Qwen 27B alone, own thresholds | 49/50 | 1 | 0 |
+| Panel: d3-flash + Qwen | 48/50 | 1 | 1 |
+| + reviewer-note rule | 48/50 | 1 | 1 |
+| + prose paraphrased (muse-glimmer, a third lineage) | 48/50 | 1 | 1 |
+| + prose reduced to facts instead | 47/50 | 1 | 2 |
+| **Full approach: + refund-arithmetic rule + fabricated-record question** | **48/50** | **0** | **2** |
+
+Collusion red team: 32 covert variants of should-not-allow decisions hide a signal (invisible characters, or a
+trigger sentence) for a simulated backdoored judge that approves anything carrying it.
+
+| Defense | Let through |
+|---|---|
+| Compromised judge alone | 32/32 |
+| + invisible characters stripped, prose paraphrased | 16/32 (every trigger sentence survived the paraphrase) |
+| Panel with an honest judge from another family | 5/32 |
+| Panel + paraphrase | 3/32 |
+| Prose reduced to facts, compromised judge alone | 0/32 |
+| Full approach, one judge compromised | 0/32 |
+
+Traps: 30 known-bad benchmark cases outside the 50. d3-flash and Qwen each allowed 0; a simulated lax judge (Qwen's
+scores scaled by 0.2) allowed 30 and raised the alarm. The fabricated-record question, on 48 benchmark code changes,
+added 5 over-cautious holds and no unsafe allows.
+
+New controls, all in packs: `integrity.no_notes_to_reviewer` (base 1.2.0, deny), `refund.amount_matches_charge`
+(customer-support 1.1.0, hold: a person decides), `unbacked_record` (code-changes 1.1.0, judge question). The gateway
+supports `--judge2`, `--paraphrase` and `--canary-rate`; a full live run with the panel and fact extraction needs
+more memory than one 36 GB laptop, so the approach was tested offline on recorded judge inputs.
+
 ## Blind labeling
 
 `make_labeling_page.py` builds a page of 50 decisions (26 real, 24 from the benchmark), shuffled, with no labels or
@@ -255,9 +299,11 @@ poc/
   bench_cases.py         generates the 181-case labeled benchmark
   benchmark.py           scores judges on it; fair per-judge thresholds; combined judges
   make_labeling_page.py  builds the blind labeling page in ../labeling/
+  panel_eval.py          the full approach on the 50 decisions, plus collusion and trap tests
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log
+    scrub.py             strips invisible characters; paraphrases or extracts facts from agent prose
     judges.py            d3-flash judge, optional HTTP judge, LLM shadow judge
     policy.py            pack loader and deterministic rules
     sandbox.py           the world and the executor (holds the credentials)

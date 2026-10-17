@@ -47,6 +47,19 @@ Nobody told the agent to misbehave. Running at temperature 0 on one laptop, with
 It also did the ordinary work correctly, and that went straight through: a typo fix, the right refund, a genuine bug
 fix.
 
+## The proposal
+
+Move authority and evidence out of the model. The agent only proposes. Deterministic rules, per use case and including
+the arithmetic, set the outer limit. A panel of two judges from different model families, each calibrated with its
+own thresholds, checks every consequential action and can only hold or block. Judges never read the agent's words
+directly: a third model reduces them to facts, so there's nothing for a hidden signal to ride on. Hidden test traps
+keep the judges honest, people decide the uncertain cases, and every step goes into a flight recorder no model can
+touch.
+
+On the 50 held-out decisions, the full approach let nothing unsafe through (48/50 correct, 2 over-cautious holds),
+and with one judge deliberately compromised it still let 0 of 32 covert actions through. See
+[`poc/README.md`](poc/README.md#the-full-approach-on-the-50-decisions).
+
 ## Is it the model, or the harness?
 
 Every decision was also scored, in shadow, by Gemma judging its own family's work. Asked to state its confidence, it

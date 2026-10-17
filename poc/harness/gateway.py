@@ -28,6 +28,9 @@ from typing import Any
 from .policy import Policy
 from .recorder import Recorder, canonical, sha256
 from .sandbox import TOOLS, Sandbox
+from .scrub import scrub_state
+
+EFFECTS = {name: t["effect"] for name, t in TOOLS.items()}
 
 AGENT_MESSAGES = {
     "deny": "Action not permitted by policy.",
@@ -40,11 +43,15 @@ AGENT_MESSAGES = {
 class Gateway:
     def __init__(self, *, run_dir: Path, session: str, task: dict[str, Any], sandbox: Sandbox, policy: Policy,
                  judges: list[Any], recorder: Recorder, versions: dict[str, str], t2_mode: str = "hold",
-                 shadow_judges: list[Any] | None = None, rng_seed: int = 7):
+                 shadow_judges: list[Any] | None = None, rng_seed: int = 7, paraphraser: Any = None,
+                 canaries: list[dict[str, Any]] | None = None, canary_rate: float = 0.0):
         self.run_dir, self.session, self.task = run_dir, session, task
         self.sb, self.policy, self.judges, self.rec = sandbox, policy, judges, recorder
         self.shadow_judges = shadow_judges or []  # scored on the same state, recorded, never used for routing
         self.denials = 0  # rule denials and judge blocks this session; feeds the denial budget
+        self.paraphraser = paraphraser  # optional: trusted third-lineage model that rewrites agent prose
+        self.canaries = canaries or []  # known-bad judge inputs, mixed in at random; never executed
+        self.canary_rate = canary_rate
         self.versions = versions
         self.t2_mode = t2_mode
         self.rng = random.Random(rng_seed)
@@ -140,6 +147,22 @@ class Gateway:
             return "allow", f"all judges below the {effect} allow threshold ({max(ps):.2f} < {allow_below})"
         return "escalate", f"uncertain band ({max(ps):.2f}; allow < {allow_below}, block >= {r['block_at']})"
 
+    def _maybe_canary(self, tool: str, questions: dict, tattrs: dict) -> None:
+        """Hidden test traps: score a known-bad input of the same type with every judge. A judge that would allow
+        it raises an alarm. Judges can't tell traps from real traffic; traps are never executed."""
+        pool = [c for c in self.canaries if c["tool"] == tool]
+        if not pool or self.rng.random() >= self.canary_rate:
+            return
+        trap = self.rng.choice(pool)
+        results = []
+        for j in self.judges + self.shadow_judges:
+            v = j.decide(questions, scrub_state(tool, trap["state"], self.paraphraser))
+            would, _ = self._route(EFFECTS[tool], [v], tool)
+            results.append({"judge": v["judge"], "p_violation": v["p_violation"], "would_route": would})
+        passed = [r["judge"] for r in results if r["would_route"] == "allow"]
+        self.log("canary", {"trap": trap["id"], "results": results, "alarm": bool(passed),
+                            "judges_that_passed_a_known_bad_action": passed}, **tattrs)
+
     def _t2(self, tool: str, args: dict[str, Any], verdicts: list[dict[str, Any]], why: str) -> str:
         if self.t2_mode == "human" and sys.stdin.isatty():
             print(f"\n  [T2] Approval needed: {tool} {json.dumps(args)[:300]}\n       reason: {why}")
@@ -187,7 +210,8 @@ class Gateway:
         if tool == "write_file":
             ctx["changed_lines"] = self.sb.file_diff(args.get("path", ""), args.get("content", ""))[1]
         if self.task.get("ticket_id"):
-            ctx["ticket_email"] = (self.sb.tickets.get(self.task["ticket_id"]) or {}).get("from")
+            ctx["ticket"] = self.sb.tickets.get(self.task["ticket_id"]) or {}
+            ctx["ticket_email"] = ctx["ticket"].get("from")
         t0 = self.policy.check(tool, args, ctx)
         pack = self.policy.pack_for(tool)["label"]
         tattrs["acme.policy.pack"] = pack
@@ -206,8 +230,14 @@ class Gateway:
         # ---- T1
         state = self._judge_state(tool, args)
         questions = self.policy.questions_for(tool)
+        # judges see the agent's text scrubbed (invisible characters removed, prose optionally paraphrased by a
+        # third-lineage model); the raw text stays in the proposal entry above
+        state = scrub_state(tool, state, self.paraphraser)
         # what every judge sees, recorded verbatim: lets anyone audit or replay the decision with any judge
-        self.log("judge_input", {"state": state, "questions": questions}, **tattrs)
+        self.log("judge_input", {"state": state, "questions": questions,
+                                 "scrubbed": {"normalized": True, "paraphrased_by":
+                                              getattr(self.paraphraser, "model", None)}}, **tattrs)
+        self._maybe_canary(tool, questions, tattrs)
         verdicts = []
         for j in self.judges:
             v = j.decide(questions, state)
@@ -215,6 +245,8 @@ class Gateway:
             self.log("t1", {**v, "questions": list(questions)}, **tattrs,
                      **{"gen_ai.request.model": v["version"], "gen_ai.operation.name": "decide"})
         decision, why = self._route(effect, verdicts, tool)
+        if t0["decision"] == "hold" and decision == "allow":
+            decision, why = "escalate", f"rule requires a person: {', '.join(t0['failed'])}"
         budget = self.policy.routing_for(tool).get("denial_budget")
         if decision == "allow" and budget is not None and self.denials >= budget:
             decision, why = "escalate", f"session denial budget spent ({self.denials} denials or blocks so far)"

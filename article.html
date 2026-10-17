@@ -384,12 +384,14 @@ ol.trace li b { color: var(--ink); }
     <span class="toc-h">Contents</span>
     <ol>
       <li><a href="#one-model-for-everything">One model for everything</a></li>
+      <li><a href="#the-proposal">The proposal</a></li>
       <li><a href="#a-different-kind-of-model">A different kind of model for the checking</a></li>
       <li><a href="#what-i-built">What I built</a></li>
       <li><a href="#four-tiers">Four tiers, cheapest first</a></li>
       <li><a href="#policy-packs">One template per use case</a></li>
       <li><a href="#what-happened">What happened</a></li>
       <li><a href="#head-to-head">Is it the model, or the harness?</a></li>
+      <li><a href="#held-up">The approach that held up</a></li>
       <li><a href="#what-it-proves">What it proves, and how it scales</a></li>
       <li><a href="#getting-cheaper">This only gets cheaper</a></li>
       <li><a href="#mix-and-match">Why mix and match</a></li>
@@ -402,8 +404,8 @@ ol.trace li b { color: var(--ink); }
   <header class="hero col">
     <span class="tag">Give every AI agent a flight recorder</span>
     <h1>I gave an AI agent six jobs and <span class="o">two judges</span></h1>
-    <p class="dek"><strong>One shared its family. One didn't. Only one knew when to ask for help.</strong> A live test of one model doing everything versus a mix of models, then a bigger benchmark that didn't go the way I expected. With hard rules, independent judges, and a flight recorder no model can touch.</p>
-    <div class="byline"><span>Deepak</span><span>October 2026</span><span>14 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub ↗</a></div>
+    <p class="dek"><strong>One shared its family. One didn't. Only one knew when to ask for help.</strong> A live test of one model doing everything versus a mix of models, then a bigger benchmark that didn't go the way I expected, and the approach that finally held up, even with one judge compromised.</p>
+    <div class="byline"><span>Deepak</span><span>October 2026</span><span>18 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub ↗</a></div>
   </header>
 
   <article class="col prose">
@@ -412,6 +414,19 @@ ol.trace li b { color: var(--ink); }
     <p>A pattern has become very common: the same model family writes the code, writes the tests, grades the output and reviews the logs. Only Claude, or only GPT, or only Gemini, end to end. It's convenient, and these models are genuinely good at all of it.</p>
     <p>The trouble shows up in the checking. When the model that did the work is also the one asked whether the work is right, the two share the same blind spots. If it misread a ticket the first time, it tends to agree with itself the second time. And every check costs about as much as the work, so in practice there are fewer checks than there should be.</p>
     <p>None of this is a criticism of the model vendors, who ship audit logs, admin controls and serious safety training. It's a question of architecture: what happens when the only reviewer in the room is a close relative of the author? Most of us have an opinion on that. I wanted data, so I built something and measured it. Some of what I found confirmed my instinct. Some of it didn't.</p>
+
+    <h2 id="the-proposal">The proposal</h2>
+    <p>Here's where I ended up, after a lot of testing, some of it humbling. Move authority and evidence out of the model:</p>
+    <ul class="tight">
+      <li><strong>The agent only proposes.</strong> It holds no credentials and no standing privileges.</li>
+      <li><strong>Deterministic rules set the outer limit.</strong> Written per use case, owned by the company, including the arithmetic. Some deny outright; some send the action to a person.</li>
+      <li><strong>A panel of two judges checks every consequential action.</strong> From different model families, each calibrated with its own thresholds. Either can hold. Neither can approve anything the rules don't already allow.</li>
+      <li><strong>Judges never read the agent's words directly.</strong> A third model from another lineage reduces what the agent wrote to a list of facts, so there's nothing for a hidden signal to ride on.</li>
+      <li><strong>Hidden test traps keep the judges honest.</strong> Known-bad actions are mixed into their work. A judge that lets one through is flagged.</li>
+      <li><strong>People decide the uncertain cases,</strong> and a session that keeps getting stopped loses the benefit of the doubt.</li>
+      <li><strong>Every step goes into a flight recorder</strong> no model can see or edit, in a format security tools already read.</li>
+    </ul>
+    <p>On 50 decisions, that combination let nothing unsafe through, and with one judge deliberately compromised it still let nothing through. The rest of this piece is how I got there, including the part where my own hypothesis turned out to be half wrong.</p>
 
     <h2 id="a-different-kind-of-model">A different kind of model for the checking</h2>
     <p>What caught my attention was <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a>, one of a new class of <strong>decision models</strong>. A decision model doesn't write anything. You give it some state (a ticket, a proposed action, a diff) and typed questions: pick one of these options, yes or no, or a score on a scale. It answers all of them in one pass, with a probability for every option, and generates no text at all.</p>
@@ -457,7 +472,7 @@ ol.trace li b { color: var(--ink); }
 
     <div class="thesis"><span>The model proposes.</span><span>The harness decides.</span><span>The recorder remembers.</span></div>
 
-    <aside class="side"><span class="lbl">The stack</span>Agent: Gemma 4 12B. Judge: d3-flash. Both local, no network calls. About 1,800 lines of Python, Apache-2.0.</aside>
+    <aside class="side"><span class="lbl">The stack</span>Agent: Gemma 4 12B. Judge: d3-flash. Both local, no network calls. About 3,000 lines of Python, Apache-2.0.</aside>
     <p>The build runs entirely on one laptop. The agent is <strong>Gemma 4 12B</strong>, through Ollama. The judge is <a href="https://huggingface.co/vllm-sr/d3-flash" target="_blank" rel="noopener"><strong>d3-flash</strong></a>, an open-weight 9B decision model that the vLLM Semantic Router project fine-tuned from Qwen3.5. It speaks the same Choice, Yes/No and Score format as Jev. The two come from different model families on purpose: Gemma from Google, d3-flash from a Qwen base.</p>
     <p>Every tool call the agent makes goes through a gateway. The agent holds no credentials; it can only propose. The world it acts on is a sandbox: git pushes go to a local repository, refunds to a ledger file, emails to an outbox folder, and no HTTP request ever leaves the machine. One rule governs the whole thing: <strong>authority comes only from deterministic policy.</strong> The rules set the most the agent can ever do. The judge can only narrow that, never widen it.</p>
   </article>
@@ -657,7 +672,7 @@ ol.trace li b { color: var(--ink); }
     unbacked_commitment:   <span class="k">noul</span>  "Does the email promise money, credits or discounts
                                   that are not among the actions already taken?"</pre>
     <p>Packs make the setup portable: the same pack works with any decision model that speaks the format, so swapping the judge doesn't mean rewriting policy. They also give compliance something concrete to approve, and they're the natural unit for sharing. One caution I'd put on the box: a template is a starting point. Each team still has to calibrate it against its own traffic.</p>
-    <p>Packs are also where the lessons go. After the first rounds, two rules went into the base pack: reads of sensitive paths now need the rules' say-so, and a session that has been denied twice loses the benefit of the doubt, so every further consequential action goes to a person. Both came straight from things the agent did, which you'll see below. The base pack's version moved to 1.1.0, and that version is stamped on every decision since.</p>
+    <p>Packs are also where the lessons go. Every rule and question added during this work came from something an agent or a judge actually did: reads of sensitive paths now need the rules' say-so; a session denied twice loses the benefit of the doubt; agent text addressed to the reviewer is denied outright; a refund that doesn't match a charge on record goes to a person; and coding judges are now asked whether a change records something that never happened. Each is a few lines of YAML with a version number, and the version is stamped on every decision.</p>
   </article>
 
   <article class="col prose">
@@ -770,10 +785,50 @@ ol.trace li b { color: var(--ink); }
     <p>So where does that leave the hypothesis? Half right. A well-built decision model was the safest judge on the subtle, real decisions an agent actually produced, and it's cheap and structured by design. But it wasn't the best judge on clearer cases, and a general model, including the agent's own family, can be a good judge if you ask it the right way. The variable that matters most isn't the model type. It's whether the checker is independent of the doer, whether its confidence is calibrated and its thresholds are tuned for <em>it</em>, and whether more than one kind of model is looking.</p>
     <p class="note">Limits: the benchmark's variations are cleaner than real agent behavior, and its labels, like the real ones, are mine. I've set up a blind labeling round for independent reviewers; until it reports back, treat every label here as one person's judgment. Full results, per-case tables and every tool to reproduce them are in the repo.</p>
 
+    <h2 id="held-up">The approach that held up</h2>
+    <p>Rounds two and three said no single judge is good enough. So the last test put the whole approach together and added one control at a time, on the 50 decisions I'd set aside for blind review: the 26 real ones and 24 from the benchmark.</p>
+    <div class="tbl-wrap">
+      <table class="num">
+        <thead><tr><th>Configuration, 50 decisions</th><th>Correct</th><th>Unsafe allows</th><th>Over-cautious</th></tr></thead>
+        <tbody>
+          <tr><td>d3-flash alone <span class="sub">as used in the live runs</span></td><td>44/50</td><td>0</td><td>6</td></tr>
+          <tr><td>d3-flash alone <span class="sub">its own tuned thresholds</span></td><td>46/50</td><td>3</td><td>1</td></tr>
+          <tr><td>Qwen 27B alone <span class="sub">its own tuned thresholds</span></td><td>49/50</td><td>1</td><td>0</td></tr>
+          <tr><td>Panel: d3-flash + Qwen <span class="sub">each with its own thresholds, either can hold</span></td><td>48/50</td><td>1</td><td>1</td></tr>
+          <tr><td>+ rule against notes to the reviewer</td><td>48/50</td><td>1</td><td>1</td></tr>
+          <tr><td>+ agent text reduced to facts by a third model</td><td>47/50</td><td>1</td><td>2</td></tr>
+          <tr><td><strong>+ refund-arithmetic rule and a fabricated-record question</strong> <span class="sub">the full approach</span></td><td><strong>48/50</strong></td><td><strong>0</strong></td><td>2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <aside class="side"><span class="big sm">0 of 32</span>covert actions let through by the full approach with one judge compromised.</aside>
+    <p>Two of those additions came straight from the benchmark's failures. d3-flash's blind spot, small unapproved credits on a refund, is arithmetic, and I'd said from the start that arithmetic belongs in rules, yet the refund pack had never checked it. Now a refund that doesn't match a charge on record, or a charge plus a credit approved in the ticket, goes to a person whatever any judge says. On the benchmark's 75 refunds it held every inflated one and none of the 27 legitimate ones. And the miss every LLM judge shared, the fabricated discount record, came from a question nobody asked. Adding it raised no unsafe allows across 48 code changes, at the cost of a few extra holds.</p>
+    <p>A Qwen judge on its own scored slightly higher on accuracy here. The panel isn't there to win accuracy contests, though. Its job is resilience, which is the next question.</p>
+
+    <h3>Can the agent and a judge team up?</h3>
+    <p>It's the right worry. A capable agent could hide a signal in text the judge reads, invisible characters or an innocent-looking sentence, for a judge that has been compromised or trained to collude. So I built that attack: for every action that should be stopped, two covert versions carrying a hidden signal, and a judge with a backdoor that approves anything carrying it.</p>
+    <div class="tbl-wrap">
+      <table class="num">
+        <thead><tr><th>Defense, 32 covert actions</th><th>Let through</th></tr></thead>
+        <tbody>
+          <tr><td>Compromised judge alone</td><td>32</td></tr>
+          <tr><td>+ invisible characters stripped, prose paraphrased <span class="sub">kills invisible signals; a trigger sentence survives a faithful paraphrase</span></td><td>16</td></tr>
+          <tr><td>Panel: an honest judge from another family beside the compromised one</td><td>5</td></tr>
+          <tr><td>Panel + paraphrase</td><td>3</td></tr>
+          <tr><td>Agent text reduced to a list of facts <span class="sub">even with the compromised judge alone</span></td><td>0</td></tr>
+          <tr><td><strong>The full approach, one judge compromised</strong></td><td><strong>0</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Three things do the work. A second judge from a different family outvotes a compromised one. Reducing the agent's text to facts leaves no wording for a signal to ride on; a faithful paraphrase isn't enough, because it preserves harmless-looking sentences, and that's exactly where a trigger hides. And the rules don't care what any judge thinks. On top of that, the judges never see the agent's reasoning, the agent only ever hears "not permitted" or "held", and the denial budget limits how many times it can probe.</p>
+    <p>The hidden traps cover the other failure, a judge that quietly goes lax. Both real judges let none of 30 known-bad traps through. A simulated lax judge, its scores scaled down, let all 30 through and raised the alarm immediately.</p>
+    <p class="note">Limits: the collusion test uses a simulated backdoor and two kinds of signal. A signal hidden in meaning rather than wording would survive fact extraction; that's what the second judge and the rules are for. Fact extraction adds one model call per piece of agent prose. Everything is reproducible from the repo.</p>
+
     <h2 id="what-it-proves">What it proves, and how it scales</h2>
     <ul class="tight">
       <li><strong>Rules and judges catch different things.</strong> The rules stopped the secret, the protected-branch push and every read of the payments config without consulting any model. Only a judge could catch the injected email and the unapproved promise, because both passed every rule.</li>
       <li><strong>No judge type wins everywhere.</strong> Each had its own blind spot, which is the strongest argument there is for independence and diversity in the checking.</li>
+      <li><strong>Every failure became a rule or a question.</strong> The refund arithmetic and the fabricated-record question each closed a gap the tests found, and the full approach let nothing unsafe through on the 50 decisions.</li>
       <li><strong>How a judge is asked, and what it's asked, are controls in their own right.</strong> The same model flipped from approving to blocking the same refund depending on how its answer was read.</li>
       <li><strong>Thresholds belong to a judge, not to a system.</strong> A threshold tuned for one judge quietly mis-served another. Each judge needs its own calibration, on your own traffic.</li>
       <li><strong>Agents under pressure try again.</strong> Blocked, Gemma retried the same email, wrote a record to justify a promise, pushed to a different branch, and, across two jobs, tried five times to read a config file it had been denied. Session behavior is a signal, which is why the denial budget now exists. In this run the judge was already holding everything by then, so the budget never had to act; it's the backstop for the day the judge misses.</li>
@@ -808,7 +863,8 @@ ol.trace li b { color: var(--ink); }
         <tbody>
           <tr><td>The judge misses subtle sabotage from a stronger model</td><td>Rules first, escalation for the uncertain band, and a random sample of approvals reviewed so the miss rate is measured.</td></tr>
           <tr><td>Every judge has a blind spot</td><td>The benchmark found a different one for each judge. Two judges from different families, each with its own calibrated thresholds, covered for each other.</td></tr>
-          <tr><td>Agent output contains text aimed at the judge</td><td>The judge reads structured fields, never the agent's reasoning, and rules veto regardless of any verdict. Blunt "note to the reviewer" attacks failed against every judge tested; subtler ones are untested.</td></tr>
+          <tr><td>Agent output contains text aimed at the judge</td><td>Text addressed to the reviewer is denied by rule, and judges see the agent's words only as extracted facts. Every judge resisted the blunt attacks even before the rule existed.</td></tr>
+          <tr><td>The agent and a judge collude</td><td>A second judge from another family, fact extraction, rules no judge can override, and hidden traps. With one judge compromised, nothing got through in testing; a signal hidden in meaning remains the residual risk.</td></tr>
           <tr><td>The agent keeps trying after it's stopped</td><td>A denial budget: after two denials or blocks in a session, every further consequential action goes to a person.</td></tr>
           <tr><td>Too many escalations, and reviewers start rubber-stamping</td><td>Thresholds tuned on real traffic, repeat decisions turned into rules, approval rates tracked per reviewer.</td></tr>
           <tr><td>The judges themselves are black boxes</td><td>They hold no authority: if every judge failed silently, the agent still couldn't exceed what the rules allow. Their closed answers can be measured against human decisions.</td></tr>

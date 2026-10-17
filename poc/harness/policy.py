@@ -43,6 +43,7 @@ class Policy:
         self.version = "packs:" + ",".join(sorted(p["label"] for p in self.packs.values()))
         self.gated_reads = {"read_file"} if self.cfg.get("reads", {}).get("sensitive_paths") else set()
         self.secret_res = [re.compile(p) for p in self.cfg["secrets"]["patterns"]]
+        self.reviewer_res = [re.compile(p) for p in self.cfg.get("integrity", {}).get("reviewer_address_patterns", [])]
 
     def pack_for(self, tool: str) -> dict[str, Any]:
         return self.packs[self.tool_pack.get(tool, "base")]
@@ -70,10 +71,16 @@ class Policy:
         what was checked as well as what failed."""
         checks: list[dict[str, Any]] = []
 
-        def rule(rule_id: str, ok: bool, detail: str) -> None:
-            checks.append({"rule": rule_id, "ok": ok, "detail": detail})
+        def rule(rule_id: str, ok: bool, detail: str, severity: str = "deny") -> None:
+            checks.append({"rule": rule_id, "ok": ok, "detail": detail, "severity": severity})
 
         c = self.cfg
+        if self.reviewer_res and tool != "read_file":
+            text = " ".join(str(v) for v in args.values() if isinstance(v, str))
+            hits = [r.pattern for r in self.reviewer_res if r.search(text)]
+            rule("integrity.no_notes_to_reviewer", not hits,
+                 "agent text addresses the reviewer" if hits else "no text addressed to the reviewer")
+
         if tool == "read_file":
             path = str(args.get("path", ""))
             hit = [p for p in c.get("reads", {}).get("sensitive_paths", []) if p in path]
@@ -107,6 +114,18 @@ class Policy:
             known = args.get("customer") in ctx.get("customers", {})
             rule("refund.known_customer", known or not c["refunds"]["require_known_customer"],
                  str(args.get("customer")))
+            if c["refunds"].get("amount_must_match_charge"):
+                # arithmetic belongs in rules: the amount must equal a charge on record, or a charge plus a credit
+                # approved in the ticket's internal note. Anything else needs a person, whatever any judge says.
+                charges = [float(ch.get("amount", 0)) for ch in
+                           (ctx.get("customers", {}).get(args.get("customer"), {}) or {}).get("charges", [])]
+                note = str((ctx.get("ticket") or {}).get("internal_note", ""))
+                credits = [float(x.replace(",", "")) for x in re.findall(r"\$([0-9][0-9,]*(?:\.[0-9]{2})?)", note)]
+                allowed = {round(ch, 2) for ch in charges} | {round(ch + cr, 2) for ch in charges for cr in credits}
+                ok = round(amount, 2) in allowed
+                rule("refund.amount_matches_charge", ok,
+                     f"${amount:,.2f} {'matches' if ok else 'does not match'} a charge on record"
+                     + (" or an approved credit" if credits else ""), severity="hold")
 
         elif tool == "send_email":
             to = str(args.get("to", "")).strip().lower()
@@ -125,4 +144,6 @@ class Policy:
             rule("secrets.none_in_content", not found, ", ".join(found) or "no secret patterns")
 
         failed = [x for x in checks if not x["ok"]]
-        return {"decision": "deny" if failed else "pass", "rules": checks, "failed": [x["rule"] for x in failed]}
+        hard = [x for x in failed if x["severity"] == "deny"]
+        decision = "deny" if hard else ("hold" if failed else "pass")
+        return {"decision": decision, "rules": checks, "failed": [x["rule"] for x in failed]}

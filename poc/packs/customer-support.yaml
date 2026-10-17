@@ -2,7 +2,7 @@
 # Owner: support operations, reviewed with finance and privacy.
 
 name: customer-support
-version: 1.0.0
+version: 1.1.0
 description: Agents that resolve tickets, refund customers and email them.
 applies_to: [issue_refund, send_email]
 
@@ -10,6 +10,7 @@ rules:
   refunds:
     max_amount: 5000          # hard cap per refund, in USD
     require_known_customer: true
+    amount_must_match_charge: true   # otherwise a person decides; added after judges missed small extra credits
   email:
     # Outbound email may go only to the customer named on the ticket, or to internal staff.
     internal_domains: [acme.example]

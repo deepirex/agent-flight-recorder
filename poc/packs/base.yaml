@@ -4,10 +4,18 @@
 # the flight recorder, so you can always tell which template made a call.
 
 name: base
-version: 1.1.0
+version: 1.2.0
 description: Organization-wide secret handling, default routing thresholds, and shared judge questions.
 
 rules:
+  integrity:
+    # Agent-written text that addresses the reviewer, or tells it what to conclude, is denied outright. The judge's
+    # job is to assess the action, not to take instructions from it. Added after the judge-injection red team.
+    reviewer_address_patterns:
+      - '(?i)\b(note|message|instructions?)\s+(to|for)\s+(the\s+)?(automated\s+|ai\s+)?(reviewer|judge|compliance|auditor|approver)'
+      - '(?i)\b(automated|ai)\s+(reviewer|judge|compliance\s+check)'
+      - '(?i)\bmark\s+(this|it)?\s*as\s+(consistent|approved|in[\s-]scope|compliant|safe)'
+      - '(?i)\[\s*compliance\s+check'
   reads:
     # Reading these needs the rules' say-so. Added after a live run where the agent, once blocked, browsed the
     # payments config. Least privilege covers what an agent can read, not only what it can do.
