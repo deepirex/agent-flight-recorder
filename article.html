@@ -720,12 +720,12 @@ ol.trace li b { color: var(--ink); }
     <p><strong>2. The specialist wasn't the best judge.</strong> On a 181-case labeled benchmark, each judge tuned its thresholds on some templates and was scored on 83 cases from templates it had never seen.</p>
     <div class="tbl-wrap">
       <table class="num">
-        <thead><tr><th>Judge, 83 unseen cases</th><th>Accuracy</th><th>Unsafe allows</th></tr></thead>
+        <thead><tr><th>Judge, 83 unseen cases</th><th>Accuracy</th><th>Unsafe allows</th><th>Over-cautious</th></tr></thead>
         <tbody>
-          <tr><td>Qwen 3.8 27B</td><td>0.94–0.96</td><td>0</td></tr>
-          <tr><td>d3-flash + Qwen <span class="sub">two families</span></td><td>0.94</td><td>0</td></tr>
-          <tr><td>Gemma 12B</td><td>0.92–0.94</td><td>1–3</td></tr>
-          <tr><td>d3-flash <span class="sub">decision model, 9B</span></td><td>0.89</td><td>5</td></tr>
+          <tr><td>Qwen 3.8 27B</td><td>0.94–0.96</td><td>0</td><td>3–5</td></tr>
+          <tr><td>d3-flash + Qwen <span class="sub">two families</span></td><td>0.94</td><td>0</td><td>5</td></tr>
+          <tr><td>Gemma 12B</td><td>0.92–0.94</td><td>1–3</td><td>2–6</td></tr>
+          <tr><td>d3-flash <span class="sub">decision model, 9B</span></td><td>0.89</td><td>5</td><td>4</td></tr>
         </tbody>
       </table>
     </div>
@@ -734,15 +734,15 @@ ol.trace li b { color: var(--ink); }
     <p class="note">The benchmark is cleaner than real agent behavior, and its labels are mine until a blind labeling round with independent reviewers reports back.</p>
 
     <h2 id="held-up">Does it hold up?</h2>
-    <p>I added the controls one at a time, on 50 decisions set aside for blind review: 26 real, 24 from the benchmark.</p>
+    <p>I added the controls one at a time, on 50 decisions set aside for blind review: 26 real, 24 from the benchmark. A mistake is either an unsafe allow (something harmful let through) or over-caution (something harmless held for a person).</p>
     <div class="tbl-wrap">
       <table class="num">
-        <thead><tr><th>Configuration, 50 decisions</th><th>Correct</th><th>Unsafe allows</th></tr></thead>
+        <thead><tr><th>Configuration, 50 decisions</th><th>Correct</th><th>Unsafe allows</th><th>Over-cautious</th></tr></thead>
         <tbody>
-          <tr><td>d3-flash alone <span class="sub">as in the live runs</span></td><td>44/50</td><td>0</td></tr>
-          <tr><td>Qwen 27B alone</td><td>49/50</td><td>1</td></tr>
-          <tr><td>Two-family panel</td><td>48/50</td><td>1</td></tr>
-          <tr><td><strong>The full pattern</strong> <span class="sub">+ refund-arithmetic rule, fact extraction, a fabricated-record question</span></td><td><strong>48/50</strong></td><td><strong>0</strong></td></tr>
+          <tr><td>d3-flash alone <span class="sub">as in the live runs</span></td><td>44/50</td><td>0</td><td>6</td></tr>
+          <tr><td>Qwen 27B alone</td><td>49/50</td><td>1</td><td>0</td></tr>
+          <tr><td>Two-family panel</td><td>48/50</td><td>1</td><td>1</td></tr>
+          <tr><td><strong>The full pattern</strong> <span class="sub">+ refund-arithmetic rule, fact extraction, a fabricated-record question</span></td><td><strong>48/50</strong></td><td><strong>0</strong></td><td>2</td></tr>
         </tbody>
       </table>
     </div>
@@ -772,9 +772,9 @@ ol.trace li b { color: var(--ink); }
       <table class="num">
         <thead><tr><th>Setup</th><th>83 unseen cases</th><th>50 decisions</th><th>Large judge used</th></tr></thead>
         <tbody>
-          <tr><td>d3-flash + Qwen on every action <span class="sub">thresholds tuned as a pair</span></td><td>0 unsafe</td><td>50/50</td><td>always</td></tr>
-          <tr><td>The two small judges only</td><td>2 unsafe</td><td>48/50, 1 unsafe</td><td>never</td></tr>
-          <tr><td><strong>Small judges first, Qwen for close calls</strong></td><td><strong>0 unsafe</strong></td><td><strong>49/50, 0 unsafe</strong></td><td>14–20% of actions</td></tr>
+          <tr><td>d3-flash + Qwen on every action <span class="sub">thresholds tuned as a pair</span></td><td>78/83, 0 unsafe</td><td>50/50</td><td>always</td></tr>
+          <tr><td>The two small judges only</td><td>79/83, 2 unsafe</td><td>48/50, 1 unsafe</td><td>never</td></tr>
+          <tr><td><strong>Small judges first, Qwen for close calls</strong></td><td><strong>78/83, 0 unsafe</strong></td><td><strong>49/50, 0 unsafe</strong></td><td>14–20% of actions</td></tr>
         </tbody>
       </table>
     </div>
