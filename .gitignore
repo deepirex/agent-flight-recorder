@@ -26,5 +26,6 @@ poc/runs/*
 !poc/runs/panel-report.json
 !poc/runs/embed-meta.json
 !poc/runs/demo/
+!poc/runs/v6-traps/
 poc/runs/**/world/
 poc/runs/**/snapshots/

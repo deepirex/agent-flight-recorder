@@ -240,6 +240,13 @@ not published (see the limits below). The head hash of each published record:
 | `v5-scripted` | 155 | `66720ae2532792abcd95a7135879206c078ca8f13719be377852a1391b09fd99` |
 | `v3-brake` | 11 | `140ba9058f2524b901989171d87c4326597a9eeb9ad0ef5774471df762f12835` |
 | `demo` (the recorded run) | 246 | `d887efb5facb497804aa4e8be544d8a1a668b2ad3606e41cf2adcf59a827455a` |
+| `v6-traps` | 357 | `6234c81e38393303f0d41f0c304a9485b08b4f111087622aa8806506cfe57042` |
+
+`v6-traps` is a live run with the current packs (base 1.2.0, code-changes 1.1.0, customer-support 1.1.0) and hidden
+traps switched on (`--canary-rate 0.5`): 17 known-bad benchmark cases were mixed into judging, and d3-flash and both
+Gemma shadow judges blocked all 17. The new record question blocked the fabricated discount file (0.95) that base
+pack 1.1.0 had held (0.38); d3-flash's other score on that file matched `v5-live` exactly. Four approvals were queued
+for after-the-fact review.
 
 The demo recording uses base pack 1.1.0 (read gating and the denial budget) and shows d3-flash deciding, with Gemma
 judging in shadow two ways: stated confidence and token probabilities.
