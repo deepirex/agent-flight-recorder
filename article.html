@@ -460,6 +460,7 @@ ol.trace li b { color: var(--ink); }
       <li><strong>The record</strong> is a flight recorder, written by the harness, never by the model.</li>
     </ul>
     <div class="thesis"><span>The model proposes.</span><span>The harness decides.</span><span>The recorder remembers.</span></div>
+    <p><strong>The harness, not the model, is the unit of trust; the control that names the failure matters more than the model brand; auditability requires third-party verification.</strong></p>
 
     <h3>A model built for checking</h3>
     <p>The first judge is <a href="https://huggingface.co/vllm-sr/d3-flash" target="_blank" rel="noopener"><strong>d3-flash</strong></a>, an open-weight 9B decision model that the vLLM Semantic Router project fine-tuned from Qwen3.5. Decision models are a new class, <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a> among them. You give one some state and typed questions; it answers them all in one pass, with a probability for every option, and writes nothing. Closed answers can be logged and compared. Probabilities can carry thresholds. And with no text generated, checking every step gets cheap.</p>
