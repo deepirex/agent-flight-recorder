@@ -156,7 +156,12 @@ class Gateway:
         trap = self.rng.choice(pool)
         results = []
         for j in self.judges + self.shadow_judges:
-            v = j.decide(questions, scrub_state(tool, trap["state"], self.paraphraser))
+            try:
+                v = j.decide(questions, scrub_state(tool, trap["state"], self.paraphraser))
+            except Exception as err:
+                results.append({"judge": _judge_id(j), "unavailable": f"{type(err).__name__}: {err}"[:200],
+                                "would_route": "unavailable"})
+                continue
             would, _ = self._route(EFFECTS[tool], [v], tool)
             results.append({"judge": v["judge"], "p_violation": v["p_violation"], "would_route": would})
         passed = [r["judge"] for r in results if r["would_route"] == "allow"]
@@ -238,13 +243,28 @@ class Gateway:
                                  "scrubbed": {"normalized": True, "paraphrased_by":
                                               getattr(self.paraphraser, "model", None)}}, **tattrs)
         self._maybe_canary(tool, questions, tattrs)
-        verdicts = []
+        verdicts, unavailable = [], []
         for j in self.judges:
-            v = j.decide(questions, state)
+            try:
+                v = j.decide(questions, state)
+            except Exception as err:  # a judge that can't answer is a recorded state, never an approval
+                unavailable.append(_judge_id(j))
+                self.log("t1_unavailable", {"judge": _judge_id(j), "error": f"{type(err).__name__}: {err}"[:500],
+                                            "questions": list(questions)}, **tattrs)
+                continue
             verdicts.append(v)
             self.log("t1", {**v, "questions": list(questions)}, **tattrs,
                      **{"gen_ai.request.model": v["version"], "gen_ai.operation.name": "decide"})
-        decision, why = self._route(effect, verdicts, tool)
+        if unavailable:
+            decision, why = "escalate", f"judge unavailable ({', '.join(unavailable)}); no judgment is not approval"
+            if verdicts:
+                d, w = self._route(effect, verdicts, tool)
+                if d == "block":  # an available judge's block still stands
+                    decision, why = d, w
+        elif not verdicts:  # no judge configured: rules alone never approve a consequential action
+            decision, why = "escalate", "no judge configured; a person decides"
+        else:
+            decision, why = self._route(effect, verdicts, tool)
         if t0["decision"] == "hold" and decision == "allow":
             decision, why = "escalate", f"rule requires a person: {', '.join(t0['failed'])}"
         budget = self.policy.routing_for(tool).get("denial_budget")
@@ -252,7 +272,12 @@ class Gateway:
             decision, why = "escalate", f"session denial budget spent ({self.denials} denials or blocks so far)"
         shadow = []
         for j in self.shadow_judges:  # same state, same questions; recorded for comparison only
-            v = j.decide(questions, state)
+            try:
+                v = j.decide(questions, state)
+            except Exception as err:  # a failing shadow judge is recorded and never affects the action
+                self.log("t1_shadow_unavailable", {"judge": _judge_id(j),
+                                                   "error": f"{type(err).__name__}: {err}"[:500]}, **tattrs)
+                continue
             would, _ = self._route(effect, [v], tool)
             shadow.append({"judge": v["judge"], "kind": v["kind"], "p_violation": v["p_violation"],
                            "per_question": v["per_question"], "latency_ms": v["latency_ms"],
@@ -294,6 +319,10 @@ class Gateway:
             out["audit_sampled"] = True
         self.outcomes.append(out)
         return result
+
+
+def _judge_id(judge: Any) -> str:
+    return str(getattr(judge, "id", None) or type(judge).__name__)
 
 
 def _vsum(verdicts: list[dict[str, Any]]) -> list[dict[str, Any]]:

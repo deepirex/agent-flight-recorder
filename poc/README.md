@@ -63,6 +63,8 @@ $PY replay.py runs/v5-live runs/v5-scripted --judge logprob:qwen3.8:27b-mlx   # 
 $PY verify.py runs/<run>/flight-recorder.jsonl               # check the chain
 $PY verify.py runs/<run>/flight-recorder.jsonl --tamper-demo # edit, delete, re-hash copies; all detected
 
+$PY -m unittest discover -s tests -v           # gateway with a judge down, all judges down, or none configured
+
 mkdir -p runs/brake && touch runs/brake/BRAKE
 $PY run_demo.py --agent live -s refund-overreach --out runs/brake   # every action refused and recorded
 ```
@@ -333,6 +335,7 @@ poc/
   make_labeling_page.py  builds the blind labeling page in ../labeling/
   panel_eval.py          the full approach on the 50 decisions, plus collusion and trap tests
   embed_judge.py         EmbeddingGemma-2 + per-question classifiers: a tiny judge for the tiered stack
+  tests/                 gateway behaviour when judges fail or are switched off (no models needed)
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log
