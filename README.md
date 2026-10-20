@@ -4,11 +4,11 @@
 
 *The model proposes. The harness decides. The recorder remembers.*
 
-Whoever makes a payment can't approve it. Banks call it maker-checker; most AI agents skip it. This is a
-maker-checker harness for agents: the agent (the maker) only proposes, and the checker is everything it can't touch:
-deterministic rules, judges from different model families that can hold or block but never approve, and people for
-the uncertain cases. A flight recorder no model can touch keeps the evidence. It's one working answer to the question
-Satya Nadella and Nikesh Arora have raised: how to separate intelligence from authority and keep AI auditable.
+An AI agent should never act on its own say-so. This harness keeps the agent and its checks apart: the agent only
+proposes, and the checks are everything it can't touch: deterministic rules, judges that can hold or block but never
+approve, and people for the uncertain cases. A flight recorder no model can touch keeps the evidence. It's one working
+answer to the question Satya Nadella and Nikesh Arora have raised: how to separate intelligence from authority and keep
+AI auditable.
 
 - **Article:** [`article.html`](article.html) (open it in a browser): the pattern, the harness, what happened, what
   surprised me, and whether it holds up under attack.
