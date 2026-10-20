@@ -479,6 +479,16 @@ ol.trace li b { color: var(--ink); }
     <div class="thesis"><span>The model proposes.</span><span>The harness decides.</span><span>The recorder remembers.</span></div>
     <p><strong>The harness, not the model, is the unit of trust; the control that names the failure matters more than the model brand; auditability requires third-party verification.</strong></p>
 
+    <h3>Why local models, not a frontier API</h3>
+    <p>Every model here runs on one machine, on purpose:</p>
+    <ul class="tight">
+      <li><strong>Cost.</strong> A check runs on every consequential action, so its price matters more than the agent's. A small local judge costs electricity.</li>
+      <li><strong>The data stays home.</strong> A judge sees everything the agent saw, including customer notes.</li>
+      <li><strong>Repeatable results.</strong> Rerun with the same policy, the local judge gave identical scores to four decimals. A hosted model can change under you unless you pin a version.</li>
+      <li><strong>Access and tuning.</strong> Open weights expose token probabilities, which mattered more than I expected, and they can be fine-tuned on the review decisions the harness records. I haven't done that fine-tuning yet; the labels are being collected.</li>
+    </ul>
+    <p>None of this says a frontier model would judge worse. It might well judge better, and the harness would take one as a judge without changes. The point is that the checks shouldn't depend on any one provider, least of all the one doing the work.</p>
+
     <h3>A model built for checking</h3>
     <p>The first judge is <a href="https://huggingface.co/vllm-sr/d3-flash" target="_blank" rel="noopener"><strong>d3-flash</strong></a>, an open-weight 9B decision model that the vLLM Semantic Router project fine-tuned from Qwen3.5. Decision models are a new class, <a href="https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/" target="_blank" rel="noopener">Jev from TypeSafe AI</a> among them. You give one some state and typed questions; it answers them all in one pass, with a probability for every option, and writes nothing. Closed answers can be logged and compared. Probabilities can carry thresholds. And with no text generated, checking every step gets cheap.</p>
     <div class="tbl-wrap">
