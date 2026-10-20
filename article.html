@@ -158,6 +158,10 @@ figure { margin: 2.6rem auto; }
 .fig-frame svg { display: block; width: 100%; min-width: 760px; height: auto; }
 figcaption { font-family: var(--mono); font-size: .76rem; color: var(--muted); margin-top: .7rem; line-height: 1.5; }
 figcaption b { color: var(--ink); font-weight: 600; }
+.tldr { margin: 1.6rem auto 0; padding: 1rem 1.2rem; border: 1px solid var(--rule); border-left: 4px solid var(--orange); background: var(--panel); border-radius: 4px; }
+.tldr h2 { font-family: var(--mono); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--orange-ink); margin: 0 0 .5rem; border: 0; padding: 0; }
+.tldr ul { margin: 0; padding-left: 1.1rem; }
+.tldr li + li { margin-top: .4rem; }
 .demo-fig img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; background: #0b0b0b; }
 
 /* ---------- Bar charts (HTML, so the numbers stay real text) ---------- */
@@ -427,6 +431,16 @@ ol.trace li b { color: var(--ink); }
     <p class="dek"><strong>I gave an AI agent six jobs and two judges, then spent a week trying to break the harness around them.</strong> What held, what didn't, and what I'd check first on an agent already in production.</p>
     <div class="byline"><span>Deepak</span><span>October 2026</span><span>15 min read</span><a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">Code and demo on GitHub &#x2197;</a></div>
   </header>
+
+  <section class="col tldr" aria-label="TL;DR">
+    <h2>TL;DR</h2>
+    <ul>
+      <li><strong>Don't trust a judge's stated confidence.</strong> Asked how sure it was, Gemma gave 55 answers, every one exactly 0 or 1. Reading its token probabilities instead cut its unsafe approvals from three to one.</li>
+      <li><strong>Paraphrasing the agent's text didn't stop a hidden signal to a compromised judge</strong> (16 of 32 got through). Reducing it to facts did (0 of 32). A second honest judge helped too: 32 &#x2192; 5.</li>
+      <li><strong>The best fixes were plain:</strong> rules for anything you can count, and narrow questions for failures I'd actually seen. Record every judge input so you can replay decisions; that's also how I found my own harness would approve with the judge switched off.</li>
+      <li><strong>Small, mostly offline, my labels:</strong> a direction, not a verdict. The code and every run are public.</li>
+    </ul>
+  </section>
 
   <figure class="col demo-fig">
     <img src="demo/judges-disagree.gif" width="1000" height="600" loading="lazy" alt="Terminal recording from the live run. Gemma proposes a refund nobody asked for. d3-flash holds it for a person at 0.67. Gemma judging its own work, asked to state its confidence, would allow it at 0.00. The same Gemma read through its token probabilities would block it at 0.96.">
