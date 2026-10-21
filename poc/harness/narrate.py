@@ -60,6 +60,10 @@ def narrate(e: dict[str, Any]) -> None:
     elif k in ("t1_unavailable", "t1_shadow_unavailable"):
         who = "SHADOW " if k == "t1_shadow_unavailable" else "JUDGE  "
         out = f"{seq}   {_c('yellow', who + ' ' + b['judge'] + ' unavailable')}  {_c('dim', b['error'][:80])}"
+    elif k == "receipt":
+        c = b["covers"]
+        label = "RECEIPT %s · %d steps · covers #%s-#%s" % (b["id"], len(b["steps"]), c["from_seq"], c["to_seq"])
+        out = f"{seq}   {_c('dim', label)}"
     elif k == "canary":
         if b["alarm"]:
             out = f"{seq}   {_c('red', '⚠ TRAP FAILED')}  {', '.join(b['judges_that_passed_a_known_bad_action'])} allowed known-bad {b['trap']}"

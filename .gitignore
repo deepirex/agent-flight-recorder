@@ -27,5 +27,6 @@ poc/runs/*
 !poc/runs/embed-meta.json
 !poc/runs/demo/
 !poc/runs/v6-traps/
+!poc/runs/v7-receipts/
 poc/runs/**/world/
 poc/runs/**/snapshots/

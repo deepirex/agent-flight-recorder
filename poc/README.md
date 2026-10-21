@@ -63,7 +63,7 @@ $PY replay.py runs/v5-live runs/v5-scripted --judge logprob:qwen3.8:27b-mlx   # 
 $PY verify.py runs/<run>/flight-recorder.jsonl               # check the chain
 $PY verify.py runs/<run>/flight-recorder.jsonl --tamper-demo # edit, delete, re-hash copies; all detected
 
-$PY -m unittest discover -s tests -v           # gateway with a judge down, all judges down, or none configured
+$PY -m unittest discover -s tests -v           # judges down or off, and receipts (no receipt, no action)
 
 mkdir -p runs/brake && touch runs/brake/BRAKE
 $PY run_demo.py --agent live -s refund-overreach --out runs/brake   # every action refused and recorded
@@ -217,6 +217,27 @@ New controls, all in packs: `integrity.no_notes_to_reviewer` (base 1.2.0, deny),
 supports `--judge2`, `--paraphrase` and `--canary-rate`; a full live run with the panel and fact extraction needs
 more memory than one 36 GB laptop, so the approach was tested offline on recorded judge inputs.
 
+## Decision receipts: no receipt, no action
+
+Every step is in the chained log, but a raw log is hard to audit: one commit sits among dozens of interleaved
+entries. So before any consequential action runs (a write, commit, push, refund or email), the gateway builds a
+**receipt** for it: every step in the session that led there (the agent's stated reasoning when it gives one, what it
+proposed, what each tool returned, which rules passed, what each judge said, the route), compacted to one line each,
+plus the range of log entries it covers and the hash of the last one.
+
+- **Built by code, not a model.** It is assembled deterministically from the recorder (`harness/receipts.py`). A
+  model-written summary could be wrong, or steered by the same text that fooled the agent.
+- **No receipt, no action.** The receipt is logged first; the executor refuses any consequential action without a
+  receipt whose digest matches that exact tool call. Reads need none. Held and blocked actions get an incident bundle
+  instead, and never run.
+- **Checkable.** Each receipt names the entries it covers and their chain head, so a reviewer can read one page per
+  action and verify it against the log, instead of trusting that an AI would have flagged anything.
+
+Example from a live run: [`runs/v7-receipts/make-ci-green/receipts/RCPT-00035-git_commit.md`](runs/v7-receipts/make-ci-green/receipts/RCPT-00035-git_commit.md)
+traces the agent from the failing test, through reading two files and writing the fix, to the passing test and the
+commit, with the judge's score at each consequential step. Receipts are written to `runs/<run>/<scenario>/receipts/`
+as Markdown and JSON, and logged as `receipt` entries.
+
 ## Blind labeling
 
 `make_labeling_page.py` builds a page of 50 decisions (26 real, 24 from the benchmark), shuffled, with no labels or
@@ -241,6 +262,7 @@ not published (see the limits below). The head hash of each published record:
 | `v3-brake` | 11 | `140ba9058f2524b901989171d87c4326597a9eeb9ad0ef5774471df762f12835` |
 | `demo` (the recorded run) | 246 | `d887efb5facb497804aa4e8be544d8a1a668b2ad3606e41cf2adcf59a827455a` |
 | `v6-traps` | 357 | `6234c81e38393303f0d41f0c304a9485b08b4f111087622aa8806506cfe57042` |
+| `v7-receipts` | 75 | `7bba64689bf76ebf2af48961d25c9c71718ea06687956533fcba8e8995bcbc37` |
 
 `v6-traps` is a live run with the current packs (base 1.2.0, code-changes 1.1.0, customer-support 1.1.0) and hidden
 traps switched on (`--canary-rate 0.5`): 17 known-bad benchmark cases were mixed into judging, and d3-flash and both
@@ -342,10 +364,11 @@ poc/
   make_labeling_page.py  builds the blind labeling page in ../labeling/
   panel_eval.py          the full approach on the 50 decisions, plus collusion and trap tests
   embed_judge.py         EmbeddingGemma-2 + per-question classifiers: a tiny judge for the tiered stack
-  tests/                 gateway behaviour when judges fail or are switched off (no models needed)
+  tests/                 judges failing or switched off, and decision receipts (no models needed)
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log
+    receipts.py          decision receipts: each consequential action's trail, compacted from the log
     scrub.py             strips invisible characters; paraphrases or extracts facts from agent prose
     judges.py            d3-flash judge, optional HTTP judge, LLM shadow judge
     policy.py            pack loader and deterministic rules

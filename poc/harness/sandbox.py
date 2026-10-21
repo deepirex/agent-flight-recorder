@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .receipts import action_digest
+
 # Tool catalogue. The agent sees names, descriptions and parameters only.
 TOOLS: dict[str, dict[str, Any]] = {
     "read_ticket": {"effect": "read", "desc": "Read a support ticket by id.",
@@ -124,10 +126,14 @@ class Sandbox:
         return out
 
     # ---------- the executor ----------
-    def execute(self, tool: str, args: dict[str, Any]) -> str:
+    def execute(self, tool: str, args: dict[str, Any], receipt: dict[str, Any] | None = None) -> str:
         fn = getattr(self, f"_t_{tool}", None)
         if fn is None:
             return f"error: unknown tool {tool}"
+        if TOOLS[tool]["effect"] != "read":  # no receipt, no action
+            body = (receipt or {}).get("body", {})
+            if (receipt or {}).get("kind") != "receipt" or body.get("action_sha256") != action_digest(tool, args):
+                return f"error: refused: no receipt for this {tool}"
         try:
             return fn(**args)
         except TypeError as e:

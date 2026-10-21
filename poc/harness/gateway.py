@@ -8,6 +8,7 @@ enough to read in one sitting. Flow for each proposed action:
            -> snapshot the world
            -> T1 judges -> route: allow | block | escalate
            -> T2 (human or hold) for escalations
+           -> receipt: every step that led here, compacted from the log (no receipt, no action)
            -> execute with executor-held credentials
            -> random audit sample
 
@@ -25,6 +26,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from . import receipts
 from .policy import Policy
 from .recorder import Recorder, canonical, sha256
 from .sandbox import TOOLS, Sandbox
@@ -309,11 +311,24 @@ class Gateway:
                                   "shadow": shadow, "pack": pack})
             return AGENT_MESSAGES["block"]
 
-        # ---- execute with executor-held credentials
-        result = self.sb.execute(tool, args)
-        e = self.log("execute", {"tool": tool, "result": result[:1500]}, **tattrs)
+        # ---- receipt: the steps that led here, compacted by code from the log, written before anything runs
+        rid = f"RCPT-{self.rec.seq + 1:05d}-{tool}"
+        final = "allow" if decision == "allow" else "approved by a person"
+        receipt = receipts.build(self.rec.entries(self.session), session=self.session, task=self.task, tool=tool,
+                                 args=args, effect=effect, decision=final, why=why, pack=pack)
+        receipt["id"] = rid
+        r_entry = self.log("receipt", receipt, **tattrs)
+        rdir = self.run_dir / "receipts"
+        rdir.mkdir(parents=True, exist_ok=True)
+        (rdir / f"{rid}.json").write_text(json.dumps({**receipt, "entry_hash": r_entry["hash"]}, indent=2,
+                                                     ensure_ascii=False))
+        (rdir / f"{rid}.md").write_text(receipts.markdown(rid, receipt, r_entry["hash"]))
+
+        # ---- execute with executor-held credentials; the executor refuses anything without a matching receipt
+        result = self.sb.execute(tool, args, receipt=r_entry)
+        e = self.log("execute", {"tool": tool, "result": result[:1500], "receipt": rid}, **tattrs)
         out = {"tool": tool, "args": args, "outcome": "error" if result.startswith("error:") else "executed",
-               "verdicts": _vsum(verdicts), "seq": e["seq"], "shadow": shadow, "pack": pack}
+               "verdicts": _vsum(verdicts), "seq": e["seq"], "shadow": shadow, "pack": pack, "receipt": rid}
         if self.rng.random() < self.policy.routing_for(tool)["audit_sample_rate"]:
             self.log("audit_sample", {"tool": tool, "note": "queued for after-the-fact review"}, **tattrs)
             out["audit_sampled"] = True

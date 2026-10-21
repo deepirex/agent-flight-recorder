@@ -37,7 +37,9 @@ class Down:
         raise TimeoutError("judge service did not answer in 30s")
 
 
-class GatewayJudgeFailures(unittest.TestCase):
+class GatewayCase(unittest.TestCase):
+    """Shared setup: a fresh recorder and sandbox per test."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
@@ -56,6 +58,8 @@ class GatewayJudgeFailures(unittest.TestCase):
     def kinds(self):
         return [e["kind"] for e in self.rec.entries("s")]
 
+
+class GatewayJudgeFailures(GatewayCase):
     def test_healthy_judge_allows(self):
         gw = self.gateway([Fixed("ok", 0.01)])
         gw.handle(*REFUND)

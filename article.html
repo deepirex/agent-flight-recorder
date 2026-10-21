@@ -476,7 +476,7 @@ ol.trace li b { color: var(--ink); }
       <li><div><strong>Judges see facts, not the agent's prose.</strong> A separate model turns what the agent wrote into a list of facts first.</div></li>
       <li><div><strong>Most actions get cheap checks.</strong> A large judge for close calls, a person for what's still unclear. Count the people: 5% of 10,000 actions a day is 500 reviews.</div></li>
       <li><div><strong>Something checks the judges.</strong> Known-bad cases mixed into their work, a sample of approvals reviewed afterwards, and every input recorded so any decision can be re-run.</div></li>
-      <li><div><strong>Everything goes into a signed log the model can't reach,</strong> including the times a judge failed to answer.</div></li>
+      <li><div><strong>Everything goes into a signed log the model can't reach,</strong> including the times a judge failed to answer. Before any action runs, the harness turns that log into a one-page receipt of how it got there. No receipt, no action.</div></li>
       <li><div><strong>Changes to the checks get checked too:</strong> a second person, a diff, a reason, a log entry.</div></li>
     </ol>
     <p>What the tests showed, without rounding up: on 83 cases from templates the judges had never seen, two judges let nothing unsafe through. On 50 decisions set aside for review, the full setup got all 50 right, but one of those came from a check I wrote after watching it fail, so read that number with care. With one judge deliberately compromised, none of 32 disguised harmful actions got through.</p>
@@ -694,7 +694,7 @@ ol.trace li b { color: var(--ink); }
         <div class="tier-id">REC<small>Recorder</small></div>
         <div>
           <h3>The flight recorder</h3>
-          <p>Append-only, every entry hash-chained and signed, so any edit breaks the chain at that exact point. Entries use <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener">OpenTelemetry's GenAI</a> attribute names, so sending them to the tools security teams already run is plumbing, not a redesign. Each names the policy and judge versions behind the decision. In the PoC I hold the signing key; for a third party to verify the log, it needs public-key signatures and an external anchor.</p>
+          <p>Append-only, every entry hash-chained and signed, so any edit breaks the chain at that exact point. Entries use <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener">OpenTelemetry's GenAI</a> attribute names, so sending them to the tools security teams already run is plumbing, not a redesign. Each names the policy and judge versions behind the decision. Before an action runs, the harness compacts every step that led to it into a short receipt, built by code rather than by a model, and the executor refuses any action without one. In the PoC I hold the signing key; for a third party to verify the log, it needs public-key signatures and an external anchor.</p>
           <span class="cost">The verdict sets retention, never whether a step is recorded</span>
         </div>
       </div>
@@ -863,7 +863,7 @@ ol.trace li b { color: var(--ink); }
     <p class="note">I chose the 0.10 margin after seeing these results, so it needs fresh cases. A 0.05 margin looked even better, which is exactly why I haven't counted it. The small panel is also weaker under collusion (2 of 32 got through), and EmbeddingGemma shares the agent's lineage, so high-risk tools should keep the large judge on every call.</p>
 
     <h2 id="who-checks">Who checks the judges?</h2>
-    <p>Back to the title. In this design, the judges are checked six ways. Some of that has only been tested offline, and I'd rather say so than round up.</p>
+    <p>Back to the title. In this design, the judges are checked seven ways. Some of that has only been tested offline, and I'd rather say so than round up.</p>
     <div class="tbl-wrap">
       <table>
         <thead><tr><th>Check on the judges</th><th>What it catches</th><th>How far I tested it</th></tr></thead>
@@ -873,6 +873,7 @@ ol.trace li b { color: var(--ink); }
           <tr><td>Known-bad cases mixed into their work</td><td>A judge going lax</td><td>Offline: real judges let 0 of 30 through; a simulated lax one let all 30 through and raised the alarm. Live: 17 traps mixed into a fresh agent run, and every judge blocked all 17. Those were clear-cut cases; subtle ones are the real test.</td></tr>
           <tr><td>Every judge input recorded</td><td>Lets anyone re-run any decision through a different judge</td><td>Used: the second and third rounds were replays of recorded inputs</td></tr>
           <tr><td>A person reviews a sample of approvals</td><td>Misses nobody flagged</td><td>Built; the latest run queued 4 approvals for review. Nobody has reviewed them yet.</td></tr>
+          <tr><td>A receipt for every action</td><td>Relying on an AI to flag problems: a person can read one page per action and check it against the log</td><td>Tested, and in a live run: <a href="https://github.com/deepirex/agent-flight-recorder/blob/main/poc/runs/v7-receipts/make-ci-green/receipts/RCPT-00035-git_commit.md" target="_blank" rel="noopener">a real receipt</a></td></tr>
           <tr><td>A judge that can't answer</td><td>An outage being read as approval</td><td>Tested: the action waits for a person and the failure is recorded</td></tr>
         </tbody>
       </table>
