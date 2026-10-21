@@ -55,7 +55,11 @@ def main() -> None:
     run_root = Path(args.out).resolve() if args.out else HERE / "runs" / f"{time.strftime('%Y%m%d-%H%M%S')}-{args.agent}"
     run_root.mkdir(parents=True, exist_ok=True)
     policy = Policy(HERE / "packs")
-    rec = Recorder(run_root / "flight-recorder.jsonl", HERE / ".keys" / "recorder.key")
+    rec = Recorder(run_root / "flight-recorder.jsonl", HERE / ".keys" / "recorder.key",
+                   signing_key_path=HERE / ".keys" / "recorder-ed25519.key")
+    pub_path = HERE / "keys" / "recorder-ed25519.pub.json"  # published: anyone can verify with this
+    pub_path.parent.mkdir(exist_ok=True)
+    pub_path.write_text(json.dumps(rec.public, indent=2) + "\n")
     judges = configured_judges(D3_DIR)
     if args.judge2:
         judges.append(LogprobLLMJudge(args.judge2.split(":", 1)[1] if args.judge2.startswith("logprob:") else args.judge2))
@@ -104,6 +108,7 @@ def main() -> None:
             run_scripted(gw, sc["script"])
         dt = time.perf_counter() - t
         gw.log("session_end", {"outcomes": gw.outcomes, "seconds": round(dt, 1)})
+        rec.checkpoint(run_root / "checkpoints.jsonl")  # signed Merkle root, published with the run
         for o in ([] if args.narrate else gw.outcomes):
             v = "; ".join(f"p={x['p_violation']:.2f} ({x['latency_ms']} ms)" for x in o.get("verdicts", []))
             extra = o.get("rules") or o.get("why") or ""

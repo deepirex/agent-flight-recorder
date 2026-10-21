@@ -28,5 +28,6 @@ poc/runs/*
 !poc/runs/demo/
 !poc/runs/v6-traps/
 !poc/runs/v7-receipts/
+!poc/runs/v8-public/
 poc/runs/**/world/
 poc/runs/**/snapshots/

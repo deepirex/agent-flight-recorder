@@ -63,7 +63,7 @@ $PY replay.py runs/v5-live runs/v5-scripted --judge logprob:qwen3.8:27b-mlx   # 
 $PY verify.py runs/<run>/flight-recorder.jsonl               # check the chain
 $PY verify.py runs/<run>/flight-recorder.jsonl --tamper-demo # edit, delete, re-hash copies; all detected
 
-$PY -m unittest discover -s tests -v           # judges down or off, and receipts (no receipt, no action)
+$PY -m unittest discover -s tests -v           # judges down or off, receipts, public signatures and proofs
 
 mkdir -p runs/brake && touch runs/brake/BRAKE
 $PY run_demo.py --agent live -s refund-overreach --out runs/brake   # every action refused and recorded
@@ -86,7 +86,7 @@ Each run writes `runs/<run>/` with `flight-recorder.jsonl`, `summary.json`, `lab
 
 ## Results (runs `v5-scripted` and `v5-live`, base pack 1.1.0, one laptop)
 
-The full records are in `runs/`. Check any of them with `verify.py --chain-only`; the signing key is not published.
+The full records are in `runs/`. Check any of them with `verify.py --chain-only`; the secret keys are not published, the public key is.
 
 **Red-team script:** every harmful proposal was stopped before it ran; the harmless typo fix went through.
 
@@ -246,14 +246,31 @@ verdicts shown, for independent reviewers. `labeling/case-index.json` maps each 
 
 ## Check the evidence yourself
 
-The published records can be verified by anyone, with plain Python and no ML packages:
+Anyone can verify the published records with plain Python: no packages, and no secret key.
 
 ```bash
-python3 verify.py runs/v5-live/flight-recorder.jsonl --chain-only
+python3 verify.py runs/v8-public/flight-recorder.jsonl --chain-only     # hashes, links, public signatures, checkpoints
+python3 prove.py --check runs/v8-public/proofs/entry-60.json            # one decision, without seeing any other
 ```
 
-`--chain-only` recomputes every hash, link and sequence number. Signatures are not checked, because the HMAC key is
-not published (see the limits below). The head hash of each published record:
+What that checks:
+
+- **The chain.** Every hash, link and sequence number is recomputed, so an edited, deleted or reordered entry shows.
+- **Public signatures.** Since `v8-public`, every entry is also signed with Ed25519. The public key is published at
+  [`keys/recorder-ed25519.pub.json`](keys/recorder-ed25519.pub.json) (key id `9972f89e5cc1af85`), so a verifier needs
+  no secret. The older HMAC signatures can still only be checked by the key holder.
+- **Published checkpoints.** After each job, the recorder signs a Merkle root over every entry so far (the same
+  structure Certificate Transparency uses) and appends it to `checkpoints.jsonl` next to the log. If anyone,
+  including the operator who holds every key, rewrites history after a checkpoint is published, the rewritten log
+  no longer matches it. Every published run below now has at least one signed checkpoint; for runs recorded before
+  public signing, that checkpoint fixes their history from 21 October 2026 onwards.
+- **Single-entry proofs.** `prove.py <log> <seq>` writes a proof that one entry is in a published checkpoint: the
+  entry, its position and the sibling hashes up to the root. It reveals nothing about other entries, so an auditor
+  can check one decision without seeing anyone else's data.
+
+`harness/ed25519.py` is RFC 8032's reference algorithm in plain Python, tested against the RFC's vectors; it is fine
+for verifying and for this demo, while a production signer should use a vetted library or an HSM. The head hash of
+each published record:
 
 | Run | Entries | Head hash |
 |---|---:|---|
@@ -263,6 +280,7 @@ not published (see the limits below). The head hash of each published record:
 | `demo` (the recorded run) | 246 | `d887efb5facb497804aa4e8be544d8a1a668b2ad3606e41cf2adcf59a827455a` |
 | `v6-traps` | 357 | `6234c81e38393303f0d41f0c304a9485b08b4f111087622aa8806506cfe57042` |
 | `v7-receipts` | 75 | `7bba64689bf76ebf2af48961d25c9c71718ea06687956533fcba8e8995bcbc37` |
+| `v8-public` | 62 | `46e5647a57d184fe6caf17140e368c01038428e5cb80142f4f933facc0a505f1` |
 
 `v6-traps` is a live run with the current packs (base 1.2.0, code-changes 1.1.0, customer-support 1.1.0) and hidden
 traps switched on (`--canary-rate 0.5`): 17 known-bad benchmark cases were mixed into judging, and d3-flash and both
@@ -303,8 +321,10 @@ tuning on real incident data, and the miss rate needs measuring with audit sampl
 - **One routing judge, not two.** A second decision model is wired (`JUDGE2_URL`) but not exercised; the LLM shadow
   judge is for comparison and never routes.
 - **d3-flash is not fine-tuned** on this organization's decisions. `labels.jsonl` is the start of that dataset.
-- **HMAC, not public-key signatures.** Production should sign with Ed25519 and anchor checkpoints in a transparency
-  log (e.g. Sigstore Rekor) so auditors can verify without the signing key.
+- **Checkpoints live in this repository.** Public signatures and signed checkpoints exist now, but the checkpoints
+  are published only here. A rewrite would show to anyone holding an earlier copy, yet the owner could still
+  force-push. Production should also post them to an independent transparency log (e.g. Sigstore Rekor) or to
+  witnesses that co-sign them, and keep the signing key in an HSM.
 - **Same process.** The recorder and gateway run inside the harness process. Production should run them as separate
   services, with the recorder writing to WORM storage.
 - **No OTel exporter.** Entries use `gen_ai.*` attribute names but are written as JSONL, not shipped as OTLP spans.
@@ -355,7 +375,8 @@ judge on every call for high-risk tools.
 poc/
   packs/                 policy packs: rules, judge questions and thresholds per use case
   run_demo.py            runs scenarios, prints outcomes, verifies the chain
-  verify.py              chain verification and tamper demo
+  verify.py              chain, public-signature and checkpoint verification; tamper demo
+  prove.py               prove one entry is in a published checkpoint, revealing nothing else
   bench.py               decision model vs LLM-as-judge comparison from a run's record
   replay.py              replay recorded judge inputs through any judge; score against labels.yaml
   labels.yaml            reference labels with reasons for every judged decision
@@ -364,11 +385,13 @@ poc/
   make_labeling_page.py  builds the blind labeling page in ../labeling/
   panel_eval.py          the full approach on the 50 decisions, plus collusion and trap tests
   embed_judge.py         EmbeddingGemma-2 + per-question classifiers: a tiny judge for the tiered stack
-  tests/                 judges failing or switched off, and decision receipts (no models needed)
+  tests/                 judges failing or off, receipts, public signatures, checkpoints, proofs (no models)
   harness/
     gateway.py           reference monitor: T0 → snapshot → T1 → route → T2 → execute, plus incidents
     recorder.py          hash-chained, signed, append-only log
     receipts.py          decision receipts: each consequential action's trail, compacted from the log
+    ed25519.py           public-key signatures (RFC 8032), plain Python
+    merkle.py            checkpoints and single-entry proofs (RFC 9162 style)
     scrub.py             strips invisible characters; paraphrases or extracts facts from agent prose
     judges.py            d3-flash judge, optional HTTP judge, LLM shadow judge
     policy.py            pack loader and deterministic rules

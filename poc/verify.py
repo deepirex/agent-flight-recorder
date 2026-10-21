@@ -1,6 +1,7 @@
 """Verify a flight-recorder log, or demonstrate tamper detection.
 
-    python verify.py runs/<run>/flight-recorder.jsonl
+    python verify.py runs/<run>/flight-recorder.jsonl --chain-only     # anyone: hashes, links, public signatures, checkpoints
+    python verify.py runs/<run>/flight-recorder.jsonl                  # key holder: also the HMAC signatures
     python verify.py runs/<run>/flight-recorder.jsonl --tamper-demo
 
 --tamper-demo never touches the original. It makes three copies and alters each one the way an insider might:
@@ -17,7 +18,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from harness.recorder import canonical, load_or_create_key, sha256, verify  # noqa: E402
+from harness.recorder import (canonical, load_or_create_key, load_public_key, sha256, verify,  # noqa: E402
+                             verify_checkpoints)
 
 
 def main() -> None:
@@ -26,15 +28,24 @@ def main() -> None:
     ap.add_argument("--tamper-demo", action="store_true")
     ap.add_argument("--chain-only", action="store_true",
                     help="check hashes, links and sequence without the signing key (anyone can run this)")
+    ap.add_argument("--pubkey", default=str(HERE / "keys" / "recorder-ed25519.pub.json"),
+                    help="published Ed25519 public key (checks public signatures and checkpoints)")
+    ap.add_argument("--checkpoints", default=None, help="published checkpoints (default: next to the log)")
     args = ap.parse_args()
     log = Path(args.log)
     key_path = HERE / ".keys" / "recorder.key"
+    pub = load_public_key(Path(args.pubkey)) if Path(args.pubkey).exists() else None
+    cps = Path(args.checkpoints) if args.checkpoints else log.parent / "checkpoints.jsonl"
     if args.chain_only or not key_path.exists():
-        result = verify(log, None)
-        print(json.dumps({"original (chain only, signatures not checked)": result}, indent=2))
+        result = verify(log, None, pub)
+        report = {"original (no secret key: hashes, links and public signatures)": result}
+        if pub is not None and cps.exists():
+            report["published checkpoints"] = verify_checkpoints(log, cps, pub)
+            result = {"ok": result["ok"] and report["published checkpoints"]["ok"]}
+        print(json.dumps(report, indent=2))
         sys.exit(0 if result["ok"] else 1)
     key = load_or_create_key(key_path)
-    result = verify(log, key)
+    result = verify(log, key, pub)
     print(json.dumps({"original": result}, indent=2))
     if not args.tamper_demo:
         sys.exit(0 if result["ok"] else 1)
@@ -53,7 +64,7 @@ def main() -> None:
         out["delete one entry"] = verify(p2, key)
         # 3. edit and recompute the hash, but without the signing key
         e = json.loads(lines[idx]); e["body"]["p_violation"] = 0.01
-        e["hash"] = sha256(canonical({k: v for k, v in e.items() if k not in ("hash", "sig")}))
+        e["hash"] = sha256(canonical({k: v for k, v in e.items() if k not in ("hash", "sig", "sig_pub")}))
         p3 = Path(td, "rehashed.jsonl"); p3.write_text("\n".join(lines[:idx] + [json.dumps(e)] + lines[idx + 1:]) + "\n")
         out["edit, then recompute the hash"] = verify(p3, key)
     print(json.dumps({"tamper_demo": out}, indent=2))

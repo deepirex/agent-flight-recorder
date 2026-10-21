@@ -1,0 +1,6 @@
+{
+  "alg": "Ed25519",
+  "key_id": "9972f89e5cc1af85",
+  "public_key": "09ea5592718d0e0508abefe2b08335f96290ec65c1338188c912af9e75b75f8d",
+  "use": "verifies sig_pub on flight-recorder entries and the signature on checkpoints"
+}

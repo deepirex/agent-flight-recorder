@@ -694,7 +694,7 @@ ol.trace li b { color: var(--ink); }
         <div class="tier-id">REC<small>Recorder</small></div>
         <div>
           <h3>The flight recorder</h3>
-          <p>Append-only, every entry hash-chained and signed, so any edit breaks the chain at that exact point. Entries use <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener">OpenTelemetry's GenAI</a> attribute names, so sending them to the tools security teams already run is plumbing, not a redesign. Each names the policy and judge versions behind the decision. Before an action runs, the harness compacts every step that led to it into a short receipt, built by code rather than by a model, and the executor refuses any action without one. In the PoC I hold the signing key; for a third party to verify the log, it needs public-key signatures and an external anchor.</p>
+          <p>Append-only, every entry hash-chained and signed, so any edit breaks the chain at that exact point. Entries use <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener">OpenTelemetry's GenAI</a> attribute names, so sending them to the tools security teams already run is plumbing, not a redesign. Each names the policy and judge versions behind the decision. Before an action runs, the harness compacts every step that led to it into a short receipt, built by code rather than by a model, and the executor refuses any action without one. Every entry is also signed with a published key, and after each job a signed fingerprint of the whole log is published, so anyone can check it without my secret, and history can't be quietly rewritten after the fact.</p>
           <span class="cost">The verdict sets retention, never whether a step is recorded</span>
         </div>
       </div>
@@ -878,7 +878,7 @@ ol.trace li b { color: var(--ink); }
         </tbody>
       </table>
     </div>
-    <p>What's missing is the outside view: labels from people other than me (a blind labeling round is set up), and a record someone else can verify without trusting me. More on that at the end.</p>
+    <p>What's missing is the outside view: labels from people other than me (a blind labeling round is set up), and fingerprints posted somewhere I don't control. More on that at the end.</p>
 
     <h2 id="where-it-can-fail">Where it can fail</h2>
     <div class="tbl-wrap">
@@ -891,7 +891,7 @@ ol.trace li b { color: var(--ink); }
           <tr><td>Reviewers start rubber-stamping</td><td>Thresholds tuned on real traffic, repeat decisions turned into rules, approval rates tracked.</td></tr>
           <tr><td>The judges are black boxes too</td><td>They hold no authority. If every judge failed, the agent still couldn't exceed the rules.</td></tr>
           <tr><td>The agent composes small actions into harm</td><td>Per-action rules won't catch ten small refunds. Open gap: production needs aggregate caps, velocity limits and a session risk score from the recorder.</td></tr>
-          <tr><td>The operator or a model provider is the adversary</td><td>The PoC trusts both. Production needs dual control on policy changes, digest-pinned models (recalibrated before any upgrade), and an external anchor.</td></tr>
+          <tr><td>The operator or a model provider is the adversary</td><td>Published fingerprints make an operator's rewrite visible, but the PoC still trusts the operator's own repository and the model providers. Production needs dual control on policy changes, digest-pinned models (recalibrated before any upgrade), and an independent transparency log.</td></tr>
           <tr><td>The full panel hasn't run live end-to-end</td><td>It was evaluated offline on recorded judge inputs; a live run needs more memory than one laptop. Treat the panel numbers as offline results.</td></tr>
         </tbody>
       </table>
@@ -919,17 +919,17 @@ ol.trace li b { color: var(--ink); }
         <thead><tr><th>Principle</th><th>In the harness</th></tr></thead>
         <tbody>
           <tr><td>Model diversity</td><td>The main judges come from a different lineage than the agent, chosen for errors that don't overlap. No model's verdict on its own work is ever acted on.</td></tr>
-          <tr><td>Observe everything</td><td>Every step in a signed, hash-chained record. HMAC in the PoC; public-key plus an external anchor in production.</td></tr>
+          <tr><td>Observe everything</td><td>Every step in a hash-chained record, signed with a published key, with signed fingerprints published after each job.</td></tr>
           <tr><td>Verifiability</td><td>Red-team runs, a benchmark anyone can rerun, and approval sampling (queued, not yet reviewed).</td></tr>
           <tr><td>Independent controls</td><td>Policy packs owned by the company; credentials held by the executor.</td></tr>
-          <tr><td>Independent auditability</td><td>The chain is verifiable with one command. Third-party verification still needs a published key and an external anchor.</td></tr>
+          <tr><td>Independent auditability</td><td>Anyone can verify the chain, the signatures and the published fingerprints with one command and no secret, and prove a single entry without seeing the rest.</td></tr>
           <tr><td>Containment</td><td>No standing privileges, judges that can only restrict, and a brake.</td></tr>
           <tr><td>Incident disclosure</td><td>Every decision names its rule and judge versions; every stop leaves an incident bundle.</td></tr>
         </tbody>
       </table>
     </div>
-    <p>The missing piece is the one Nikesh put first: verification by a third party. A record only the operator can check is a log, not an audit. It takes a published key, Merkle roots anchored in a transparency log, and selective disclosure, so an auditor can verify a decision without seeing customer data. That's what would let a business show duty of care on top of a model it doesn't control.</p>
-    <p>The code, every evidence run and an unedited demo are at <a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">deepirex/agent-flight-recorder</a>. Building something similar, especially on that last piece? Let's compare notes.</p>
+    <p>The piece Nikesh put first, verification by a third party, is now partly built. A record only the operator can check is a log, not an audit. So every entry is signed with a published key, a signed fingerprint of the whole log is published after each job, and an auditor can be given a proof that one decision is in the published history without seeing anyone else's data. <a href="https://github.com/deepirex/agent-flight-recorder/blob/main/poc/README.md#check-the-evidence-yourself" target="_blank" rel="noopener">Anyone can check it</a> with plain Python and no secret. What's left is posting those fingerprints somewhere I don't control, an independent transparency log, so that not even I could rewrite them. That's what would let a business show duty of care on top of a model it doesn't control.</p>
+    <p>The code, every evidence run and an unedited demo are at <a href="https://github.com/deepirex/agent-flight-recorder" target="_blank" rel="noopener">deepirex/agent-flight-recorder</a>. Building something similar, especially that last piece? Let's compare notes.</p>
 
     <div class="thesis"><span>Stop asking whether the model is trustworthy.</span><span>Build a system that doesn't need it to be.</span></div>
 
